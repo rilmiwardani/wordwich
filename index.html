@@ -133,10 +133,10 @@
       <!-- Header -->
       <header class="p-4 border-b border-gray-800 bg-stream-bg z-10 flex justify-between items-center shrink-0">
         <div>
-          <h1 onclick="toggleFullScreen()" class="text-xl font-bold tracking-tight text-white cursor-pointer hover:text-gray-300 transition-colors" title="Klik untuk Fullscreen">
-            KAJEPIT<span id="ws-status-indicator" class="text-yellow-400 transition-colors duration-300">!</span>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-1">
+            <span onclick="toggleFullScreen()" class="cursor-pointer hover:text-gray-300 transition-colors" title="Klik untuk Fullscreen">KAJEPIT</span><span id="ws-status-indicator" class="text-yellow-400 transition-colors duration-300 cursor-pointer" onclick="openConnectModal()" title="Klik untuk koneksi TikTok">!</span>
           </h1>
-          <p class="text-xs text-gray-400">Cari kata yang terjepit!</p>
+          <p id="subtitle-text" class="text-xs text-gray-400">Cari kata yang terjepit!</p>
         </div>
         <div class="text-xs font-semibold text-gray-500 bg-gray-900 px-3 py-1.5 rounded-md">Tebakan: <span id="guess-count" class="text-white">0</span></div>
       </header>
@@ -285,6 +285,43 @@
     <!-- Confetti Canvas -->
     <!-- FIX: z-[200] agar confetti tampil DI ATAS win modal z-[150] -->
     <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-[200] w-full h-full"></canvas>
+
+    <!-- TikTok Connect Modal -->
+    <div id="connect-modal-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[250] flex items-center justify-center transition-opacity duration-300 opacity-0 pointer-events-none">
+      <div class="relative bg-[#0a1118]/95 backdrop-blur-2xl border border-gray-700/50 w-[90%] max-w-sm p-8 rounded-3xl flex flex-col items-center text-center modal-glow transform transition-all duration-500 translate-y-8 scale-95" id="connect-modal-content">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1 bg-gradient-to-r from-transparent via-stream-green to-transparent opacity-70 blur-[2px] rounded-t-3xl"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-stream-green to-transparent opacity-100"></div>
+
+        <!-- TikTok Icon -->
+        <div class="mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-[#25F4EE] via-[#FE2C55] to-[#000] flex items-center justify-center shadow-[0_0_30px_rgba(254,44,85,0.2)]">
+          <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.52a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.72a8.2 8.2 0 004.76 1.52V6.79a4.84 4.84 0 01-1-.1z"/></svg>
+        </div>
+
+        <h2 class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-300 mb-1">Koneksi TikTok</h2>
+        <p class="text-gray-500 text-[11px] mb-5">Masukkan username TikTok Live kamu</p>
+
+        <!-- Status indicator -->
+        <div id="connect-status" class="hidden w-full mb-4 px-3 py-2 rounded-xl text-[11px] font-bold text-center"></div>
+
+        <div class="relative w-full mb-4">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">@</span>
+          <input id="tiktok-username-input" type="text" placeholder="username" autocomplete="off" spellcheck="false"
+            class="w-full bg-[#121c29] border border-[#1e2d40] rounded-xl py-3 pl-8 pr-4 text-white font-bold text-sm focus:outline-none focus:border-stream-green/50 focus:shadow-[0_0_15px_rgba(74,222,128,0.1)] transition-all placeholder:text-gray-600" />
+        </div>
+
+        <button id="btn-connect-tiktok" onclick="connectTikTok()" class="w-full bg-gradient-to-r from-stream-green to-[#22c55e] text-[#040d14] font-bold text-sm py-3 rounded-xl hover:brightness-110 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(74,222,128,0.2)] mb-2">
+          Hubungkan
+        </button>
+
+        <button id="btn-disconnect-tiktok" onclick="disconnectTikTok()" class="hidden w-full bg-red-950/50 border border-red-500/30 text-red-400 font-bold text-[11px] py-2 rounded-xl hover:bg-red-950/80 transition-all mb-2">
+          Putuskan Koneksi
+        </button>
+
+        <button onclick="closeConnectModal()" class="text-gray-500 hover:text-gray-300 text-[11px] font-medium mt-1 transition-colors">
+          Tutup
+        </button>
+      </div>
+    </div>
 
     <!-- Win Modal -->
     <div id="win-modal-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[150] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500 pb-[10vh]">
@@ -883,6 +920,8 @@
               handleStopTrack();
             } else if (event === "queue_update") {
               handleQueueUpdate(eventData);
+            } else if (event === "tiktok_status") {
+              handleTiktokStatus(eventData);
             }
           } catch (error) {
             console.error("Error parsing message:", error);
@@ -898,6 +937,117 @@
           updateWSStatus("disconnected");
         };
       }
+
+      // --- TIKTOK CONNECT MODAL ---
+      const connectModalOverlay = document.getElementById("connect-modal-overlay");
+      const connectModalContent = document.getElementById("connect-modal-content");
+      const connectStatusEl = document.getElementById("connect-status");
+      const tiktokUsernameInput = document.getElementById("tiktok-username-input");
+      const btnConnect = document.getElementById("btn-connect-tiktok");
+      const btnDisconnect = document.getElementById("btn-disconnect-tiktok");
+      const subtitleText = document.getElementById("subtitle-text");
+      let isTiktokConnected = false;
+      let connectedUsername = null;
+
+      function openConnectModal() {
+        connectModalOverlay.classList.remove("opacity-0", "pointer-events-none");
+        connectModalOverlay.classList.add("opacity-100");
+        connectModalContent.classList.remove("translate-y-8", "scale-95");
+        connectModalContent.classList.add("translate-y-0", "scale-100");
+        tiktokUsernameInput.focus();
+      }
+
+      function closeConnectModal() {
+        connectModalOverlay.classList.add("opacity-0", "pointer-events-none");
+        connectModalOverlay.classList.remove("opacity-100");
+        connectModalContent.classList.add("translate-y-8", "scale-95");
+        connectModalContent.classList.remove("translate-y-0", "scale-100");
+      }
+
+      function connectTikTok() {
+        const username = tiktokUsernameInput.value.trim().replace(/^@/, "");
+        if (!username) return;
+        if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
+          showConnectStatus("Username tidak valid!", "error");
+          return;
+        }
+        if (globalWs && globalWs.readyState === WebSocket.OPEN) {
+          globalWs.send(JSON.stringify({ type: "connect_tiktok", username }));
+          showConnectStatus("Menghubungkan...", "loading");
+          btnConnect.disabled = true;
+          btnConnect.innerText = "Menghubungkan...";
+        }
+      }
+
+      function disconnectTikTok() {
+        if (globalWs && globalWs.readyState === WebSocket.OPEN) {
+          globalWs.send(JSON.stringify({ type: "disconnect_tiktok" }));
+        }
+      }
+
+      function showConnectStatus(msg, type) {
+        connectStatusEl.classList.remove("hidden", "bg-green-950/50", "text-green-400", "border-green-500/30", "bg-red-950/50", "text-red-400", "border-red-500/30", "bg-yellow-950/50", "text-yellow-400", "border-yellow-500/30");
+        connectStatusEl.classList.add("border");
+        if (type === "success") {
+          connectStatusEl.classList.add("bg-green-950/50", "text-green-400", "border-green-500/30");
+        } else if (type === "error") {
+          connectStatusEl.classList.add("bg-red-950/50", "text-red-400", "border-red-500/30");
+        } else {
+          connectStatusEl.classList.add("bg-yellow-950/50", "text-yellow-400", "border-yellow-500/30");
+        }
+        connectStatusEl.innerText = msg;
+      }
+
+      function handleTiktokStatus(data) {
+        isTiktokConnected = data.connected;
+        connectedUsername = data.username;
+
+        const indicator = document.getElementById("ws-status-indicator");
+
+        if (data.connected && data.username) {
+          indicator.classList.remove("text-yellow-400", "text-red-500");
+          indicator.classList.add("text-stream-green");
+          subtitleText.innerText = `Live: @${data.username}`;
+          subtitleText.classList.remove("text-gray-400");
+          subtitleText.classList.add("text-stream-green/70");
+
+          showConnectStatus(`Terhubung ke @${data.username}`, "success");
+          btnConnect.disabled = false;
+          btnConnect.innerText = "Hubungkan";
+          btnDisconnect.classList.remove("hidden");
+          tiktokUsernameInput.value = data.username;
+
+          // Auto-close modal after 1.5s on success
+          setTimeout(closeConnectModal, 1500);
+        } else {
+          indicator.classList.remove("text-stream-green");
+          indicator.classList.add("text-yellow-400");
+          subtitleText.innerText = "Cari kata yang terjepit!";
+          subtitleText.classList.remove("text-stream-green/70");
+          subtitleText.classList.add("text-gray-400");
+
+          btnConnect.disabled = false;
+          btnConnect.innerText = "Hubungkan";
+          btnDisconnect.classList.add("hidden");
+
+          if (connectedUsername === null) {
+            // Belum pernah connect — show modal
+            showConnectStatus("Belum terhubung", "error");
+          } else {
+            showConnectStatus("Koneksi terputus", "error");
+          }
+        }
+      }
+
+      // Enter key on username input
+      tiktokUsernameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") connectTikTok();
+      });
+
+      // Show connect modal on first load if not connected
+      setTimeout(() => {
+        if (!isTiktokConnected) openConnectModal();
+      }, 1500);
 
       function toggleFullScreen() {
         const elem = document.documentElement;

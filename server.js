@@ -8,13 +8,7 @@ const { spawn } = require("child_process");
 
 // --- CONFIG ---
 const PORT = 3000;
-const TIKTOK_USERNAME = process.argv[2];
-
-if (!TIKTOK_USERNAME) {
-  console.error("\n❌ Masukkan username TikTok!");
-  console.log("💡 node server.js username\n");
-  process.exit(1);
-}
+let TIKTOK_USERNAME = process.argv[2] || null; // Opsional dari CLI
 
 const MAX_QUEUE = 10;
 const REQUEST_COOLDOWN = 10000; // 10 detik
@@ -120,31 +114,64 @@ app.get("/stream/:videoId", (req, res) => {
 });
 
 // --- TIKTOK ---
-const tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
+let tiktokLiveConnection = null;
+let tiktokRetryTimeout = null;
+let isTiktokConnected = false;
 
-// reconnect loop
+function broadcastTiktokStatus() {
+  broadcast("tiktok_status", { connected: isTiktokConnected, username: TIKTOK_USERNAME });
+}
+
+function disconnectTikTok() {
+  clearTimeout(tiktokRetryTimeout);
+  if (tiktokLiveConnection) {
+    tiktokLiveConnection.disconnect();
+    tiktokLiveConnection.removeAllListeners();
+    tiktokLiveConnection = null;
+  }
+  isTiktokConnected = false;
+  broadcastTiktokStatus();
+  console.log("🔌 TikTok disconnected");
+}
+
+function setupTikTokListeners() {
+  if (!tiktokLiveConnection) return;
+
+  tiktokLiveConnection.on("connected", () => {
+    console.log("🟢 CONNECTED");
+    isTiktokConnected = true;
+    broadcastTiktokStatus();
+  });
+
+  tiktokLiveConnection.on("disconnected", () => {
+    console.log("🔌 DISCONNECTED");
+    isTiktokConnected = false;
+    broadcastTiktokStatus();
+  });
+
+  tiktokLiveConnection.on("error", (err) => {
+    console.error("❌ ERROR:", err);
+  });
+}
+
 async function connectTikTok() {
+  if (!TIKTOK_USERNAME) return;
+  disconnectTikTok();
+
+  tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
+  setupTikTokListeners();
+  setupTikTokChatHandler();
+
   try {
     const state = await tiktokLiveConnection.connect();
-    console.log(`✅ Terhubung ke TikTok @${state.roomId}`);
+    console.log(`✅ Terhubung ke TikTok @${TIKTOK_USERNAME} (Room ${state.roomId})`);
   } catch (err) {
     console.error("❌ Gagal konek, retry 5 detik...");
-    setTimeout(connectTikTok, 5000);
+    tiktokRetryTimeout = setTimeout(connectTikTok, 5000);
   }
 }
-connectTikTok();
 
-tiktokLiveConnection.on("connected", () => {
-  console.log("🟢 CONNECTED");
-});
-
-tiktokLiveConnection.on("disconnected", () => {
-  console.log("🔌 DISCONNECTED");
-});
-
-tiktokLiveConnection.on("error", (err) => {
-  console.error("❌ ERROR:", err);
-});
+if (TIKTOK_USERNAME) connectTikTok();
 
 // --- UTIL ---
 function canRequest(userId) {
@@ -157,8 +184,10 @@ function canRequest(userId) {
   return true;
 }
 
-// --- CHAT EVENT ---
-tiktokLiveConnection.on("chat", async (data) => {
+function setupTikTokChatHandler() {
+  if (!tiktokLiveConnection) return;
+
+  tiktokLiveConnection.on("chat", (data) => {
   const msg = data.comment.trim();
 
   const isHost = data.uniqueId === TIKTOK_USERNAME;
@@ -213,11 +242,12 @@ tiktokLiveConnection.on("chat", async (data) => {
   }
 });
 
-// --- GIFT EVENT ---
-tiktokLiveConnection.on("gift", (data) => {
-  console.log(`🎁 ${data.nickname} kirim ${data.giftName}`);
-  broadcast("gift", data);
-});
+  // --- GIFT EVENT ---
+  tiktokLiveConnection.on("gift", (data) => {
+    console.log(`🎁 ${data.nickname} kirim ${data.giftName}`);
+    broadcast("gift", data);
+  });
+}
 
 // --- MUSIC ---
 async function handlePlayRequest(query, userData) {
@@ -304,6 +334,9 @@ function broadcast(type, data) {
 wss.on("connection", (ws) => {
   console.log("🌐 Frontend terhubung");
 
+  // Kirim status TikTok ke client baru
+  ws.send(JSON.stringify({ event: "tiktok_status", data: { connected: isTiktokConnected, username: TIKTOK_USERNAME } }));
+
   if (currentTrack) {
     ws.send(JSON.stringify({ event: "play_track", data: currentTrack }));
   }
@@ -313,6 +346,20 @@ wss.on("connection", (ws) => {
   ws.on("message", (message) => {
     try {
       const parsed = JSON.parse(message);
+
+      // --- CONNECT/DISCONNECT TikTok dari Frontend ---
+      if (parsed.type === "connect_tiktok") {
+        const username = (parsed.username || "").trim().replace(/^@/, "");
+        if (username && /^[a-zA-Z0-9_.]+$/.test(username)) {
+          TIKTOK_USERNAME = username;
+          console.log(`🎯 Connecting to @${username}...`);
+          connectTikTok();
+        }
+      }
+
+      if (parsed.type === "disconnect_tiktok") {
+        disconnectTikTok();
+      }
 
       if (parsed.type === "track_finished") {
         playNext();
@@ -351,6 +398,7 @@ wss.on("connection", (ws) => {
 // --- START ---
 server.listen(PORT, () => {
   console.log(`\n🚀 Server: http://localhost:${PORT}`);
-  console.log(`🎯 TikTok: @${TIKTOK_USERNAME}`);
+  if (TIKTOK_USERNAME) console.log(`🎯 TikTok: @${TIKTOK_USERNAME}`);
+  else console.log(`⏳ Menunggu username TikTok dari frontend...`);
   console.log(`🎵 Stream: http://localhost:${PORT}/stream/<videoId>\n`);
 });
