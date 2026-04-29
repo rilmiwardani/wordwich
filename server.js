@@ -25,7 +25,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // FIX: Hanya serve file yang diperlukan (bukan seluruh direktori)
-const ALLOWED_STATIC = new Set(["index.html", "output.css"]);
+const ALLOWED_STATIC = new Set(["index.html", "output.css", "kata_umum.txt", "kamus.txt"]);
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/:file", (req, res, next) => {
   if (ALLOWED_STATIC.has(req.params.file)) {
