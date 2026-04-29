@@ -147,6 +147,22 @@ function setupTikTokListeners() {
     console.log("🔌 DISCONNECTED");
     isTiktokConnected = false;
     broadcastTiktokStatus();
+
+    // Auto reconnect if connection drops
+    console.log("🔄 Auto reconnecting in 5 seconds...");
+    clearTimeout(tiktokRetryTimeout);
+    tiktokRetryTimeout = setTimeout(connectTikTok, 5000);
+  });
+
+  tiktokLiveConnection.on("streamEnd", () => {
+    console.log("🛑 STREAM ENDED");
+    isTiktokConnected = false;
+    broadcastTiktokStatus();
+
+    // Auto reconnect when stream ends (host might restart)
+    console.log("🔄 Stream ended. Waiting for host to restart... (reconnect in 10s)");
+    clearTimeout(tiktokRetryTimeout);
+    tiktokRetryTimeout = setTimeout(connectTikTok, 10000);
   });
 
   tiktokLiveConnection.on("error", (err) => {

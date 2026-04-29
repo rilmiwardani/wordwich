@@ -810,13 +810,12 @@
 
         // Wave 1: Center burst
         confettiParticles = [];
-        addBurst(cw / 2, ch * 0.35, 60, 10);
+        addBurst(cw / 2, ch * 0.35, 30, 8); // dikurangi dari 60
         // Wave 2: Left burst (delayed)
-        setTimeout(() => addBurst(cw * 0.25, ch * 0.45, 40, 8), 300);
+        setTimeout(() => addBurst(cw * 0.25, ch * 0.45, 15, 6), 250); // dikurangi dari 40
         // Wave 3: Right burst (delayed)
-        setTimeout(() => addBurst(cw * 0.75, ch * 0.45, 40, 8), 500);
-        // Wave 4: Top shower
-        setTimeout(() => addBurst(cw / 2, ch * 0.1, 50, 14), 800);
+        setTimeout(() => addBurst(cw * 0.75, ch * 0.45, 15, 6), 500); // dikurangi dari 40
+        // Wave 4 dihapus untuk optimasi performa
 
         if (!confettiAnimationId) Confetti();
       }
