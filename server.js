@@ -20,6 +20,7 @@ const wss = new WebSocket.Server({ server });
 
 // FIX: Hanya serve file yang diperlukan (bukan seluruh direktori)
 const ALLOWED_STATIC = new Set(["index.html", "output.css", "kata_umum.txt", "kamus.txt"]);
+app.use("/sfx", express.static(path.join(__dirname, "sfx")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/:file", (req, res, next) => {
   if (ALLOWED_STATIC.has(req.params.file)) {
@@ -113,14 +114,24 @@ app.get("/stream/:videoId", (req, res) => {
   res.on("error", killYtDlp);
 });
 
-// --- TIKTOK ---
+// --- CONNECTION SOURCE STATE ---
+// activeSource: "tlc" | "indofinity" | null
+let activeSource = null;
+
+function broadcastConnectionStatus() {
+  broadcast("connection_status", {
+    source: activeSource,
+    tlc: { connected: isTiktokConnected, username: TIKTOK_USERNAME },
+    indofinity: { connected: isIndofinityConnected, address: INDOFINITY_ADDRESS }
+  });
+  // Backward compat: juga kirim tiktok_status untuk frontend lama
+  broadcast("tiktok_status", { connected: isTiktokConnected, username: TIKTOK_USERNAME });
+}
+
+// --- TIKTOK LIVE CONNECTOR ---
 let tiktokLiveConnection = null;
 let tiktokRetryTimeout = null;
 let isTiktokConnected = false;
-
-function broadcastTiktokStatus() {
-  broadcast("tiktok_status", { connected: isTiktokConnected, username: TIKTOK_USERNAME });
-}
 
 function disconnectTikTok() {
   clearTimeout(tiktokRetryTimeout);
@@ -130,7 +141,8 @@ function disconnectTikTok() {
     tiktokLiveConnection = null;
   }
   isTiktokConnected = false;
-  broadcastTiktokStatus();
+  if (activeSource === "tlc") activeSource = null;
+  broadcastConnectionStatus();
   console.log("🔌 TikTok disconnected");
 }
 
@@ -138,41 +150,44 @@ function setupTikTokListeners() {
   if (!tiktokLiveConnection) return;
 
   tiktokLiveConnection.on("connected", () => {
-    console.log("🟢 CONNECTED");
+    console.log("🟢 TLC CONNECTED");
     isTiktokConnected = true;
-    broadcastTiktokStatus();
+    activeSource = "tlc";
+    broadcastConnectionStatus();
   });
 
   tiktokLiveConnection.on("disconnected", () => {
-    console.log("🔌 DISCONNECTED");
+    console.log("🔌 TLC DISCONNECTED");
     isTiktokConnected = false;
-    broadcastTiktokStatus();
+    broadcastConnectionStatus();
 
     // Auto reconnect if connection drops
-    console.log("🔄 Auto reconnecting in 5 seconds...");
+    console.log("🔄 TLC auto reconnecting in 5 seconds...");
     clearTimeout(tiktokRetryTimeout);
     tiktokRetryTimeout = setTimeout(connectTikTok, 5000);
   });
 
   tiktokLiveConnection.on("streamEnd", () => {
-    console.log("🛑 STREAM ENDED");
+    console.log("🛑 TLC STREAM ENDED");
     isTiktokConnected = false;
-    broadcastTiktokStatus();
+    broadcastConnectionStatus();
 
-    // Auto reconnect when stream ends (host might restart)
     console.log("🔄 Stream ended. Waiting for host to restart... (reconnect in 10s)");
     clearTimeout(tiktokRetryTimeout);
     tiktokRetryTimeout = setTimeout(connectTikTok, 10000);
   });
 
   tiktokLiveConnection.on("error", (err) => {
-    console.error("❌ ERROR:", err);
+    console.error("❌ TLC ERROR:", err);
   });
 }
 
 async function connectTikTok() {
   if (!TIKTOK_USERNAME) return;
   disconnectTikTok();
+
+  // Putuskan IndoFinity jika aktif
+  if (isIndofinityConnected) disconnectIndofinity();
 
   tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
   setupTikTokListeners();
@@ -182,12 +197,163 @@ async function connectTikTok() {
     const state = await tiktokLiveConnection.connect();
     console.log(`✅ Terhubung ke TikTok @${TIKTOK_USERNAME} (Room ${state.roomId})`);
   } catch (err) {
-    console.error("❌ Gagal konek, retry 5 detik...");
+    console.error("❌ TLC gagal konek, retry 5 detik...");
     tiktokRetryTimeout = setTimeout(connectTikTok, 5000);
   }
 }
 
 if (TIKTOK_USERNAME) connectTikTok();
+
+// --- INDOFINITY WEBSOCKET CLIENT ---
+let INDOFINITY_ADDRESS = null; // e.g. "192.168.1.100:62024"
+let indofinityWs = null;
+let indofinityRetryTimeout = null;
+let isIndofinityConnected = false;
+
+function disconnectIndofinity() {
+  clearTimeout(indofinityRetryTimeout);
+  if (indofinityWs) {
+    try { indofinityWs.close(); } catch (e) {}
+    indofinityWs = null;
+  }
+  isIndofinityConnected = false;
+  if (activeSource === "indofinity") activeSource = null;
+  broadcastConnectionStatus();
+  console.log("🔌 IndoFinity disconnected");
+}
+
+function connectIndofinity() {
+  if (!INDOFINITY_ADDRESS) return;
+  disconnectIndofinity();
+
+  // Putuskan TikTok jika aktif
+  if (isTiktokConnected) disconnectTikTok();
+
+  const wsUrl = `ws://${INDOFINITY_ADDRESS}`;
+  console.log(`🌐 Menghubungkan ke IndoFinity: ${wsUrl}`);
+
+  try {
+    indofinityWs = new WebSocket(wsUrl);
+  } catch (err) {
+    console.error(`❌ IndoFinity URL tidak valid: ${wsUrl}`);
+    broadcastConnectionStatus();
+    return;
+  }
+
+  indofinityWs.on("open", () => {
+    console.log(`🟢 IndoFinity CONNECTED: ${wsUrl}`);
+    isIndofinityConnected = true;
+    activeSource = "indofinity";
+    broadcastConnectionStatus();
+  });
+
+  indofinityWs.on("message", (raw) => {
+    try {
+      const message = JSON.parse(raw.toString());
+      handleIndofinityEvent(message);
+    } catch (err) {
+      console.error("❌ IndoFinity parse error:", err.message);
+    }
+  });
+
+  indofinityWs.on("close", () => {
+    console.log("🔌 IndoFinity connection closed");
+    isIndofinityConnected = false;
+    broadcastConnectionStatus();
+
+    // Auto reconnect
+    console.log("🔄 IndoFinity auto reconnecting in 5 seconds...");
+    clearTimeout(indofinityRetryTimeout);
+    indofinityRetryTimeout = setTimeout(connectIndofinity, 5000);
+  });
+
+  indofinityWs.on("error", (err) => {
+    console.error("❌ IndoFinity WS error:", err.message);
+  });
+}
+
+// Normalize IndoFinity events ke format yang sama dengan TikTok
+function handleIndofinityEvent(message) {
+  const { event, data } = message;
+  if (!event) return;
+
+  // --- CHAT EVENT ---
+  if (event === "chat") {
+    const chatData = {
+      uniqueId: data.uniqueId || data.userId || "unknown",
+      nickname: data.nickname || data.uniqueId || "Penonton",
+      comment: data.comment || "",
+      profilePictureUrl: data.profilePictureUrl || null,
+      followRole: data.followRole || 0,
+      isModerator: data.isModerator || false,
+    };
+
+    const msg = chatData.comment.trim();
+    const isHost = false; // IndoFinity tidak punya konsep host langsung
+    const isMod = chatData.isModerator;
+    const isFollower = chatData.followRole >= 1;
+
+    let role = "NON-FOLLOWER";
+    if (isMod) role = "MOD";
+    else if (isFollower) role = "FOLLOWER";
+
+    console.log(`[IF][${role}] ${chatData.nickname}: ${msg}`);
+    broadcast("chat", { ...chatData, role });
+
+    // --- PLAY COMMAND ---
+    if (msg.toLowerCase().startsWith("!play ")) {
+      if (!isMod && !isFollower) {
+        console.log(`[IF][BLOCKED REQUEST] ${chatData.nickname} - bukan follower`);
+        broadcast("request_blocked", {
+          nickname: chatData.nickname,
+          uniqueId: chatData.uniqueId,
+          reason: "Hanya follower yang bisa request lagu"
+        });
+        return;
+      }
+
+      if (!canRequest(chatData.uniqueId)) {
+        console.log(`[IF][COOLDOWN] ${chatData.nickname}`);
+        return;
+      }
+
+      if (musicQueue.length >= MAX_QUEUE) {
+        console.log(`[IF][QUEUE FULL]`);
+        return;
+      }
+
+      const query = msg.substring(6).trim();
+      if (query.length > 0) {
+        handlePlayRequest(query, chatData);
+      }
+    }
+
+    // --- SKIP COMMAND ---
+    if (msg.toLowerCase() === "!skip" && isMod) {
+      console.log(`[IF][SKIP] oleh ${chatData.nickname}`);
+      playNext();
+    }
+  }
+
+  // --- GIFT EVENT ---
+  if (event === "gift") {
+    console.log(`[IF] 🎁 ${data.nickname || data.uniqueId} kirim ${data.giftName || "gift"}`);
+    broadcast("gift", data);
+  }
+
+  // --- DONATION EVENTS (Saweria, Sociabuzz, Trakteer, dll.) ---
+  const donationEvents = ["saweria", "sociabuzz", "trakteer", "tako", "bagibagi", "sibagi", "tiptap"];
+  if (donationEvents.includes(event)) {
+    console.log(`[IF] 💰 Donasi ${event}: ${data.name || data.nickname || "Anonim"} - ${data.amount || ""}`);
+    broadcast("donation", { source: event, ...data });
+  }
+
+  // --- FORWARD SEMUA EVENT LAINNYA ---
+  const handledEvents = ["chat", "gift", ...donationEvents];
+  if (!handledEvents.includes(event)) {
+    broadcast(event, data);
+  }
+}
 
 // --- UTIL ---
 function canRequest(userId) {
@@ -350,7 +516,13 @@ function broadcast(type, data) {
 wss.on("connection", (ws) => {
   console.log("🌐 Frontend terhubung");
 
-  // Kirim status TikTok ke client baru
+  // Kirim status koneksi lengkap ke client baru
+  ws.send(JSON.stringify({ event: "connection_status", data: {
+    source: activeSource,
+    tlc: { connected: isTiktokConnected, username: TIKTOK_USERNAME },
+    indofinity: { connected: isIndofinityConnected, address: INDOFINITY_ADDRESS }
+  }}));
+  // Backward compat
   ws.send(JSON.stringify({ event: "tiktok_status", data: { connected: isTiktokConnected, username: TIKTOK_USERNAME } }));
 
   if (currentTrack) {
@@ -368,13 +540,32 @@ wss.on("connection", (ws) => {
         const username = (parsed.username || "").trim().replace(/^@/, "");
         if (username && /^[a-zA-Z0-9_.]+$/.test(username)) {
           TIKTOK_USERNAME = username;
-          console.log(`🎯 Connecting to @${username}...`);
+          console.log(`🎯 TLC: Connecting to @${username}...`);
           connectTikTok();
         }
       }
 
       if (parsed.type === "disconnect_tiktok") {
         disconnectTikTok();
+      }
+
+      // --- CONNECT/DISCONNECT IndoFinity dari Frontend ---
+      if (parsed.type === "connect_indofinity") {
+        const address = (parsed.address || "").trim() || "localhost";
+        // Tambahkan port default jika tidak ada
+        INDOFINITY_ADDRESS = address.includes(":") ? address : `${address}:62024`;
+        console.log(`🎯 IndoFinity: Connecting to ${INDOFINITY_ADDRESS}...`);
+        connectIndofinity();
+      }
+
+      if (parsed.type === "disconnect_indofinity") {
+        disconnectIndofinity();
+      }
+
+      // --- DISCONNECT ALL ---
+      if (parsed.type === "disconnect_all") {
+        disconnectTikTok();
+        disconnectIndofinity();
       }
 
       if (parsed.type === "track_finished") {
