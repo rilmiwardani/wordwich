@@ -681,7 +681,7 @@
 
       <!-- LEADERBOARD VIEW -->
       <div id="leaderboard-view"
-        class="hidden absolute inset-x-0 top-6 flex flex-col items-center px-6 opacity-0 transition-all duration-500 scale-95">
+        class="hidden w-full flex flex-col items-center opacity-0 transition-all duration-500 scale-95 mb-4">
         <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-200 to-yellow-500 mb-5 tracking-tight flex items-center gap-2 drop-shadow-md">
           <svg class="w-7 h-7 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" fill="currentColor" viewBox="0 0 24 24">
              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
@@ -1666,7 +1666,6 @@
       document.getElementById("win-info-view").classList.add("opacity-100", "scale-100");
       document.getElementById("leaderboard-view").classList.remove("opacity-100", "scale-100");
       document.getElementById("leaderboard-view").classList.add("opacity-0", "scale-95", "hidden");
-      document.getElementById("leaderboard-view").style.position = "absolute";
 
       ctxConfetti.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
       if (confettiAnimationId) {
@@ -2207,10 +2206,9 @@
             winView.classList.add("hidden");
             // Fade in leaderboard view
             lbView.classList.remove("hidden");
-            requestAnimationFrame(() => {
-              lbView.classList.remove("opacity-0", "scale-95");
-              lbView.classList.add("opacity-100", "scale-100");
-            });
+            void lbView.offsetWidth; // Force reflow untuk mobile browser
+            lbView.classList.remove("opacity-0", "scale-95");
+            lbView.classList.add("opacity-100", "scale-100");
           }, 500);
         }, 5000);
 
