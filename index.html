@@ -611,6 +611,16 @@
           </div>
           <input type="checkbox" id="setting-multi-word" class="w-4 h-4 accent-[#22d3ee] rounded cursor-pointer">
         </label>
+
+        <div class="w-full h-[1px] bg-gray-800/60"></div>
+
+        <label class="flex items-center justify-between cursor-pointer">
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-gray-200">Mode Kategori Ketat (Hard Mode)</span>
+            <span class="text-[10px] text-gray-500">Hanya izinkan tebakan yang termasuk dalam kategori aktif</span>
+          </div>
+          <input type="checkbox" id="setting-strict-category" class="w-4 h-4 accent-[#22d3ee] rounded cursor-pointer">
+        </label>
       </div>
 
       <!-- Action Buttons -->
@@ -1052,18 +1062,21 @@
     // --- CATEGORY & SETTINGS STATE ---
     let categoriesData = {}; // Data dari categories.json
     let allCategoryWordsSet = new Set();
+    let activeCategoryWordsSet = new Set(); // Set kata kategori yang sedang aktif (untuk Hard Mode)
     let rawKataUmumList = [];
     let gameSettings = JSON.parse(localStorage.getItem("guessGameSettings") || "null") || {
       selectedCategories: ["random"],
       showCategoryClue: true,
-      allowMultiWord: true
+      allowMultiWord: true,
+      strictCategory: false
     };
     // Pastikan selectedCategories adalah Array dan tidak kosong
     if (!gameSettings || !Array.isArray(gameSettings.selectedCategories) || gameSettings.selectedCategories.length === 0) {
       gameSettings = {
         selectedCategories: ["random"],
         showCategoryClue: gameSettings ? gameSettings.showCategoryClue !== false : true,
-        allowMultiWord: gameSettings ? gameSettings.allowMultiWord !== false : true
+        allowMultiWord: gameSettings ? gameSettings.allowMultiWord !== false : true,
+        strictCategory: gameSettings ? gameSettings.strictCategory === true : false
       };
     }
     // Migrasi setting lama "all" → "random"
@@ -1531,11 +1544,13 @@
     const categoryOptionsList = document.getElementById("category-options-list");
     const settingShowClueEl = document.getElementById("setting-show-clue");
     const settingMultiWordEl = document.getElementById("setting-multi-word");
+    const settingStrictCategoryEl = document.getElementById("setting-strict-category");
 
     function openSettingsModal() {
       renderCategoryOptionsUI();
       settingShowClueEl.checked = gameSettings.showCategoryClue !== false;
       settingMultiWordEl.checked = gameSettings.allowMultiWord !== false;
+      settingStrictCategoryEl.checked = gameSettings.strictCategory === true;
 
       settingsModalOverlay.classList.remove("opacity-0", "pointer-events-none");
       settingsModalOverlay.classList.add("opacity-100");
@@ -1643,6 +1658,7 @@
     function saveAndApplySettings(restartNow = false) {
       gameSettings.showCategoryClue = settingShowClueEl.checked;
       gameSettings.allowMultiWord = settingMultiWordEl.checked;
+      gameSettings.strictCategory = settingStrictCategoryEl.checked;
       localStorage.setItem("guessGameSettings", JSON.stringify(gameSettings));
 
       rebuildActiveWordPool();
@@ -1726,6 +1742,7 @@
 
       targetWords.sort();
       availableTargetWords = [...targetWords];
+      activeCategoryWordsSet = new Set(targetWords);
       updateCategoryBadgeUI();
     }
 
@@ -1872,7 +1889,11 @@
 
     function isValidGuessWord(guess) {
       if (!guess) return false;
-      // Valid jika kata tunggal atau frasa terdaftar di kamus/database kategori
+      if (gameSettings.strictCategory) {
+        // Mode Kategori Ketat: hanya izinkan tebakan yang terdaftar di kategori/pool aktif
+        return activeCategoryWordsSet.has(guess);
+      }
+      // Mode normal: valid jika kata tunggal atau frasa terdaftar di kamus/database kategori
       if (validWordsSet.has(guess) || allCategoryWordsSet.has(guess)) return true;
       return false;
     }
@@ -2020,8 +2041,18 @@
         if (isLocal) showError("Hanya huruf abjad dan spasi yang diperbolehkan!");
         return false;
       }
+      if (guess.replace(/ /g, "").length < 2) {
+        if (isLocal) showError("Tebakan minimal 2 huruf!");
+        return false;
+      }
       if (!isValidGuessWord(guess)) {
-        if (isLocal) showError("Kata/frasa tidak terdaftar di kamus!");
+        if (isLocal) {
+          if (gameSettings.strictCategory) {
+            showError("Tebakan harus dari kategori aktif (Hard Mode)!");
+          } else {
+            showError("Kata/frasa tidak terdaftar di kamus!");
+          }
+        }
         return false;
       }
       if (guessSet.has(guess)) {
