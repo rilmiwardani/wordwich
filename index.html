@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
     rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link href="/output.css" rel="stylesheet" />
   <style>
     body {
@@ -232,7 +233,7 @@
 <body class="h-screen w-screen flex items-center justify-center font-sans antialiased">
   <!-- Main Game Container (Mobile/Chat format) -->
   <main
-    class="w-full max-w-lg h-full md:h-[90vh] flex flex-col relative bg-stream-bg md:border md:border-gray-800 md:rounded-xl overflow-hidden shadow-2xl">
+    class="w-full max-w-lg sm:max-w-xl lg:max-w-2xl h-[100dvh] sm:h-[94dvh] lg:h-[92dvh] flex flex-col relative bg-stream-bg sm:border sm:border-gray-800 sm:rounded-2xl overflow-hidden shadow-2xl my-auto">
     <!-- Header -->
     <header class="p-4 border-b border-gray-800 bg-stream-bg z-10 flex justify-between items-center shrink-0">
       <div>
@@ -246,7 +247,7 @@
           <p id="subtitle-text" class="text-xs text-gray-400">Cari kata yang terjepit!</p>
           <span id="header-category-badge" onclick="openSettingsModal()"
             class="hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-900 text-gray-300 border border-gray-800/80 tracking-wide cursor-pointer hover:border-gray-650 hover:text-white transition-all"
-            title="Klik untuk ubah kategori">🎲 Semua</span>
+            title="Klik untuk ubah kategori"><i class="fa-solid fa-layer-group mr-1 text-emerald-400"></i> Semua</span>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -455,7 +456,7 @@
       <!-- How to Request Instruction -->
       <div
         class="w-full bg-black/40 text-gray-400 text-[9px] tracking-wider flex justify-center items-center py-1.5 border-t border-gray-800/60 font-medium">
-        <span class="mr-1.5 opacity-80">🎶</span> Ketik <span
+        <span class="mr-1.5 opacity-80 text-emerald-400"><i class="fa-solid fa-music"></i></span> Ketik <span
           class="text-stream-green font-bold mx-1 px-1 bg-stream-green/10 rounded">&nbsp;!play &lt;judul
           lagu&gt;&nbsp;</span>
         di komentar
@@ -566,7 +567,7 @@
 
       <div class="flex items-center justify-between pb-3 mb-3 border-b border-gray-800/80">
         <h2 class="text-base font-extrabold text-white flex items-center gap-2">
-          <span class="text-cyan-400">⚙️</span> Pengaturan Kategori
+          <span class="text-cyan-400"><i class="fa-solid fa-gear"></i></span> Pengaturan Kategori
         </h2>
         <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white p-1 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -666,20 +667,6 @@
           <div id="win-avatar-container"
             class="relative h-28 w-28 flex items-center justify-center rounded-full p-1 bg-gradient-to-b from-stream-green to-blue-500 shadow-lg">
           </div>
-          <!-- Crown/Trophy SVG -->
-          <div class="absolute -top-3 left-1/2 -translate-x-1/2 streak-pop-in">
-            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none">
-              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5z" fill="url(#crownGrad)" stroke="#CA8A04"
-                stroke-width="0.5" />
-              <rect x="5" y="16" width="14" height="2" rx="1" fill="url(#crownGrad)" />
-              <defs>
-                <linearGradient id="crownGrad" x1="12" y1="4" x2="12" y2="18" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#FDE68A" />
-                  <stop offset="1" stop-color="#F59E0B" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
         </div>
 
         <h2 id="win-title" class="text-3xl font-extrabold text-white mb-2 tracking-tight drop-shadow-md">Tebakan Benar!
@@ -722,13 +709,7 @@
         class="w-full flex flex-col items-center opacity-0 transition-all duration-500 scale-95 mb-2">
         
         <h2 class="font-black uppercase tracking-tight flex items-center justify-center gap-2 drop-shadow-md w-full mb-4" style="font-size: 18px;">
-          <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-             <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-          </svg>
-          <span style="background: linear-gradient(to right, #facc15, #fde68a, #eab308); -webkit-background-clip: text; color: transparent;">TOP 5 PEMAIN</span>
-          <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-             <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-          </svg>
+          <span style="background: linear-gradient(to right, #facc15, #fde68a, #eab308); -webkit-background-clip: text; color: transparent;">TOP 5</span>
         </h2>
         
         <div id="leaderboard-list" class="w-full space-y-1.5 mb-4">
@@ -746,8 +727,8 @@
   <script>
     // ====== BACKEND CONFIG ======
     // Ganti ke domain backend Render kamu (tanpa trailing slash).
-    const BACKEND_HTTP = "http://localhost:3000";
-    const BACKEND_WS = "ws://localhost:3000";
+    const BACKEND_HTTP = window.location.origin;
+    const BACKEND_WS = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host;
 
     // FIX #11: XSS sanitization — escape HTML sebelum inject ke DOM
     function escapeHTML(str) {
@@ -1083,7 +1064,7 @@
     if (gameSettings.selectedCategories.includes("all")) {
       gameSettings.selectedCategories = ["random"];
     }
-    let currentCategoryLabel = "🔀 Acak";
+    let currentCategoryLabel = `<i class="fa-solid fa-shuffle text-emerald-400 mr-1.5"></i> Acak`;
     let _lastRandomCategoryKey = null; // track kategori random aktif saat ini
 
     let targetWords = [...defaultDictionary];
@@ -1572,12 +1553,23 @@
       const isRandom = selected.includes("random");
       const isUmum = !isRandom && selected.includes("umum") && selected.length === 1;
 
+      // Helper fungsi ikon FontAwesome
+      function getCatIconHtml(catKeyOrCat) {
+        if (catKeyOrCat === "random") return `<i class="fa-solid fa-shuffle text-emerald-400"></i>`;
+        if (catKeyOrCat === "umum") return `<i class="fa-solid fa-book text-emerald-400"></i>`;
+        const cat = (typeof catKeyOrCat === "string") ? categoriesData[catKeyOrCat] : catKeyOrCat;
+        if (cat && cat.icon) {
+          return `<i class="${cat.icon} text-emerald-400"></i>`;
+        }
+        return `<i class="fa-solid fa-layer-group text-emerald-400"></i>`;
+      }
+
       // Opsi "Acak" (ganti "Semua")
       const randomItem = document.createElement("div");
       randomItem.className = `p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between select-none ${isRandom ? 'bg-green-950/15 border-stream-green/60 text-stream-green' : 'bg-[#121c29] border-[#1e2d40] text-gray-400 hover:border-gray-650'}`;
       randomItem.innerHTML = `
         <div class="flex items-center gap-2">
-          <span class="text-base">🔀</span>
+          <span class="text-sm shrink-0 flex items-center justify-center w-5 h-5 text-emerald-400"><i class="fa-solid fa-shuffle"></i></span>
           <div class="flex flex-col text-left">
             <span class="text-xs font-bold text-white">Acak</span>
             <span class="text-[9px] text-gray-500">Tiap ronde kategori berubah otomatis</span>
@@ -1594,7 +1586,7 @@
       umumItem.className = `p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between select-none ${isUmum ? 'bg-green-950/15 border-stream-green/60 text-stream-green' : 'bg-[#121c29] border-[#1e2d40] text-gray-400 hover:border-gray-650'}`;
       umumItem.innerHTML = `
         <div class="flex items-center gap-2 min-w-0 text-left">
-          <span class="text-base shrink-0">📖</span>
+          <span class="text-sm shrink-0 flex items-center justify-center w-5 h-5 text-emerald-400"><i class="fa-solid fa-book"></i></span>
           <div class="flex flex-col min-w-0">
             <span class="text-xs font-bold text-white">Umum</span>
             <span class="text-[9px] text-gray-500">${umumCount} kata umum Indonesia</span>
@@ -1613,7 +1605,7 @@
         item.className = `p-2.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between select-none ${active ? 'bg-green-950/15 border-stream-green/60 text-stream-green' : 'bg-[#121c29] border-[#1e2d40] text-gray-400 hover:border-gray-650'}`;
         item.innerHTML = `
           <div class="flex items-center gap-2 min-w-0 text-left">
-            <span class="text-base shrink-0">${cat.emoji || '🎯'}</span>
+            <span class="text-sm shrink-0 flex items-center justify-center w-5 h-5 text-emerald-400"><i class="${cat.icon || 'fa-solid fa-layer-group'}"></i></span>
             <div class="flex flex-col min-w-0">
               <span class="text-xs font-bold text-white truncate">${escapeHTML(cat.name)}</span>
               <span class="text-[9px] text-gray-500">${count} kata/frasa</span>
@@ -1693,34 +1685,36 @@
         if (chosenKey === "umum") {
           if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
           else pool.push(...defaultDictionary);
-          currentCategoryLabel = "📖 Umum";
+          currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`;
         } else {
           const cat = categoriesData[chosenKey];
           if (cat && cat.words) {
             pool.push(...cat.words);
-            currentCategoryLabel = `${cat.emoji || '🎯'} ${cat.name}`;
+            const iconTag = cat.icon ? `<i class="${cat.icon} text-emerald-400 mr-1.5"></i>` : `<i class="fa-solid fa-layer-group text-emerald-400 mr-1.5"></i>`;
+            currentCategoryLabel = `${iconTag} ${cat.name}`;
           } else {
             // Fallback
             if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
             else pool.push(...defaultDictionary);
-            currentCategoryLabel = "🔀 Acak";
+            currentCategoryLabel = `<i class="fa-solid fa-shuffle text-emerald-400 mr-1.5"></i> Acak`;
           }
         }
       } else if (selected.includes("umum") && selected.length === 1) {
         // Mode Umum saja
         if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
         else pool.push(...defaultDictionary);
-        currentCategoryLabel = "📖 Umum";
+        currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`;
       } else {
         const labels = [];
         selected.forEach(key => {
           const cat = categoriesData[key];
           if (cat) {
             if (cat.words) pool.push(...cat.words);
-            labels.push(`${cat.emoji || '🎯'} ${cat.name}`);
+            const iconTag = cat.icon ? `<i class="${cat.icon} text-emerald-400 mr-1.5"></i>` : `<i class="fa-solid fa-layer-group text-emerald-400 mr-1.5"></i>`;
+            labels.push(`${iconTag} ${cat.name}`);
           } else if (key === "umum") {
             if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
-            labels.push("📖 Umum");
+            labels.push(`<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`);
           }
         });
         currentCategoryLabel = labels.length > 2
@@ -1751,7 +1745,7 @@
       if (badge) {
         if (gameSettings.showCategoryClue) {
           badge.classList.remove("hidden");
-          badge.innerText = currentCategoryLabel;
+          badge.innerHTML = currentCategoryLabel;
         } else {
           badge.classList.add("hidden");
         }
@@ -2479,7 +2473,7 @@
           
           if (idx === 0) {
             // 1st Place - Gold
-            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#451a03] shrink-0 z-10" style="width: 32px; height: 32px; min-width: 32px; background: linear-gradient(to bottom, #fcd34d, #b45309); border: 2px solid #fef08a; font-size: 14px; box-shadow: 0 0 12px rgba(251,191,36,0.6);"><svg class="absolute text-yellow-300 drop-shadow-md" style="top: -10px; right: -6px; width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5z"/></svg>1</div>`;
+            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#451a03] shrink-0 z-10" style="width: 32px; height: 32px; min-width: 32px; background: linear-gradient(to bottom, #fcd34d, #b45309); border: 2px solid #fef08a; font-size: 14px; box-shadow: 0 0 12px rgba(251,191,36,0.6);">1</div>`;
             rowStyle = `z-10 transform scale-[1.02]`;
             rowBg = `background: linear-gradient(to right, rgba(180, 83, 9, 0.3), rgba(18, 28, 41, 0.9)); border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 0 20px rgba(251,191,36,0.15);`;
             nameStyle = `text-yellow-400 font-extrabold text-sm drop-shadow-sm`;

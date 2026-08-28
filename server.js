@@ -4,6 +4,7 @@ const WebSocket = require("ws");
 const { WebcastPushConnection } = require("tiktok-live-connector");
 const ytSearch = require("yt-search");
 const path = require("path");
+const os = require("os");
 const { spawn } = require("child_process");
 
 // --- CONFIG ---
@@ -66,7 +67,7 @@ app.get("/stream/:videoId", (req, res) => {
   // taruh file cookies.txt di folder yang sama, uncomment baris di bawah:
   // args.unshift('--cookies', path.join(__dirname, 'cookies.txt'));
 
-  const ytdlp = spawn("yt-dlp", args);
+  const ytdlp = spawn("yt-dlp", args, { shell: true });
 
   // Set header sebelum data mengalir
   res.setHeader("Content-Type", "audio/webm");
@@ -603,8 +604,22 @@ wss.on("connection", (ws) => {
 });
 
 // --- START ---
-server.listen(PORT, () => {
-  console.log(`\n🚀 Server: http://localhost:${PORT}`);
+function getLocalNetworkIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "localhost";
+}
+
+server.listen(PORT, "0.0.0.0", () => {
+  const localIp = getLocalNetworkIp();
+  console.log(`\n🚀 Server Local  : http://localhost:${PORT}`);
+  console.log(`🌐 Server Network: http://${localIp}:${PORT} (Buka URL ini di HP / Tablet Wi-Fi yang sama)`);
   if (TIKTOK_USERNAME) console.log(`🎯 TikTok: @${TIKTOK_USERNAME}`);
   else console.log(`⏳ Menunggu username TikTok dari frontend...`);
   console.log(`🎵 Stream: http://localhost:${PORT}/stream/<videoId>\n`);

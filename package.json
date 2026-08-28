@@ -15,7 +15,7 @@
     "@tailwindcss/cli": "^4.2.4",
     "express": "^5.2.1",
     "tailwindcss": "^4.2.4",
-    "tiktok-live-connector": "^2.1.1-beta1",
+    "tiktok-live-connector": "^2.4.4",
     "ws": "^8.20.0",
     "yt-search": "^2.13.1"
   }

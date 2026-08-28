@@ -10,3 +10,81 @@
   --color-stream-divider: #09111a;
   --color-stream-green: #4ade80;
 }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN & MEDIA QUERIES
+   ========================================================================== */
+
+/* Full dynamic viewport height helper */
+html, body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   1. SMARTPHONE MOBILE (< 640px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 639px) {
+  body {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  /* Main container uses 100% height without borders or rounded corners */
+  main {
+    border-radius: 0 !important;
+    border: none !important;
+    height: 100dvh !important;
+    max-width: 100% !important;
+  }
+
+  /* Responsive padding & touch targets */
+  .modal-glow {
+    max-height: 85dvh !important;
+    width: 95% !important;
+    padding: 1.25rem !important;
+  }
+
+  /* Smooth mobile font adjustments */
+  header h1 {
+    font-size: 1.125rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. TABLET (640px - 1023px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 640px) and (max-width: 1023px) {
+  main {
+    max-width: 38rem !important; /* 608px */
+    height: 94dvh !important;
+    margin: 1.5rem auto;
+    border-radius: 1.25rem !important;
+  }
+
+  .modal-glow {
+    max-height: 88dvh !important;
+    max-width: 32rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. DESKTOP & LARGE SCREENS (≥ 1024px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  main {
+    max-width: 42rem !important; /* 672px */
+    height: 92dvh !important;
+    margin: auto;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px 0 rgba(74, 222, 128, 0.05) !important;
+  }
+
+  .modal-glow {
+    max-height: 85dvh !important;
+    max-width: 34rem !important;
+  }
+}
