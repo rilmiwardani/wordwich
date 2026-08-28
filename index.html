@@ -245,9 +245,6 @@
         </h1>
         <div class="flex items-center gap-1.5 mt-0.5">
           <p id="subtitle-text" class="text-xs text-gray-400">Cari kata yang terjepit!</p>
-          <span id="header-category-badge" onclick="openSettingsModal()"
-            class="hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-900 text-gray-300 border border-gray-800/80 tracking-wide cursor-pointer hover:border-gray-650 hover:text-white transition-all"
-            title="Klik untuk ubah kategori"><i class="fa-solid fa-layer-group mr-1 text-emerald-400"></i> Semua</span>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -300,6 +297,17 @@
         <span class="text-gray-500 font-bold uppercase text-[9px] tracking-wider hidden sm:inline">LAST WORD</span>
         <span id="last-secret-word"
           class="font-bold text-stream-green uppercase tracking-widest">WORD</span>
+      </div>
+    </div>
+
+    <!-- Active Category Bar (Below Last Winner Banner & Above Guess List) -->
+    <div id="category-bar-container"
+      class="px-4 py-2 bg-[#09131d]/90 border-b border-gray-800/80 flex items-center shrink-0 text-xs z-10">
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">KATEGORI:</span>
+        <span id="header-category-badge" class="inline-flex items-center gap-1.5 text-xs font-bold text-white tracking-wide">
+          <i class="fa-solid fa-layer-group text-emerald-400"></i> Semua
+        </span>
       </div>
     </div>
 
@@ -1588,7 +1596,7 @@
         <div class="flex items-center gap-2 min-w-0 text-left">
           <span class="text-sm shrink-0 flex items-center justify-center w-5 h-5 text-emerald-400"><i class="fa-solid fa-book"></i></span>
           <div class="flex flex-col min-w-0">
-            <span class="text-xs font-bold text-white">Umum</span>
+            <span class="text-xs font-bold text-white">Kosakata Umum</span>
             <span class="text-[9px] text-gray-500">${umumCount} kata umum Indonesia</span>
           </div>
         </div>
@@ -1685,7 +1693,7 @@
         if (chosenKey === "umum") {
           if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
           else pool.push(...defaultDictionary);
-          currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`;
+          currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Kosakata Umum`;
         } else {
           const cat = categoriesData[chosenKey];
           if (cat && cat.words) {
@@ -1703,7 +1711,7 @@
         // Mode Umum saja
         if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
         else pool.push(...defaultDictionary);
-        currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`;
+        currentCategoryLabel = `<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Kosakata Umum`;
       } else {
         const labels = [];
         selected.forEach(key => {
@@ -1714,7 +1722,7 @@
             labels.push(`${iconTag} ${cat.name}`);
           } else if (key === "umum") {
             if (rawKataUmumList.length > 0) pool.push(...rawKataUmumList);
-            labels.push(`<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Umum`);
+            labels.push(`<i class="fa-solid fa-book text-emerald-400 mr-1.5"></i> Kosakata Umum`);
           }
         });
         currentCategoryLabel = labels.length > 2
@@ -1742,11 +1750,14 @@
 
     function updateCategoryBadgeUI() {
       const badge = document.getElementById("header-category-badge");
+      const bar = document.getElementById("category-bar-container");
       if (badge) {
         if (gameSettings.showCategoryClue) {
+          if (bar) bar.classList.remove("hidden");
           badge.classList.remove("hidden");
           badge.innerHTML = currentCategoryLabel;
         } else {
+          if (bar) bar.classList.add("hidden");
           badge.classList.add("hidden");
         }
       }
@@ -2206,7 +2217,7 @@
       const oldItems = listEl.querySelectorAll(".guess-item-node");
       oldItems.forEach((item) => item.remove());
 
-      const VISIBLE_HALF = 4;
+      const VISIBLE_HALF = 3;
       const fragAbove = document.createDocumentFragment();
       const fragBelow = document.createDocumentFragment();
 
