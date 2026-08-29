@@ -1,7 +1,8 @@
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
-const { WebcastPushConnection } = require("tiktok-live-connector");
+const { TikTokLiveConnection, WebcastPushConnection } = require("tiktok-live-connector");
+const TikTokConnector = TikTokLiveConnection || WebcastPushConnection;
 const ytSearch = require("yt-search");
 const path = require("path");
 const os = require("os");
@@ -118,29 +119,33 @@ app.get("/stream/:videoId", (req, res) => {
 // --- CONNECTION SOURCE STATE ---
 // activeSource: "tlc" | "indofinity" | null
 let activeSource = null;
+let isTiktokConnecting = false;
+let isTiktokConnected = false;
+let isIndofinityConnecting = false;
+let isIndofinityConnected = false;
 
 function broadcastConnectionStatus() {
   broadcast("connection_status", {
     source: activeSource,
-    tlc: { connected: isTiktokConnected, username: TIKTOK_USERNAME },
-    indofinity: { connected: isIndofinityConnected, address: INDOFINITY_ADDRESS }
+    tlc: { connected: isTiktokConnected, connecting: isTiktokConnecting, username: TIKTOK_USERNAME },
+    indofinity: { connected: isIndofinityConnected, connecting: isIndofinityConnecting, address: INDOFINITY_ADDRESS }
   });
   // Backward compat: juga kirim tiktok_status untuk frontend lama
-  broadcast("tiktok_status", { connected: isTiktokConnected, username: TIKTOK_USERNAME });
+  broadcast("tiktok_status", { connected: isTiktokConnected, connecting: isTiktokConnecting, username: TIKTOK_USERNAME });
 }
 
 // --- TIKTOK LIVE CONNECTOR ---
 let tiktokLiveConnection = null;
 let tiktokRetryTimeout = null;
-let isTiktokConnected = false;
 
 function disconnectTikTok() {
   clearTimeout(tiktokRetryTimeout);
   if (tiktokLiveConnection) {
-    tiktokLiveConnection.disconnect();
     tiktokLiveConnection.removeAllListeners();
+    try { tiktokLiveConnection.disconnect(); } catch (e) {}
     tiktokLiveConnection = null;
   }
+  isTiktokConnecting = false;
   isTiktokConnected = false;
   if (activeSource === "tlc") activeSource = null;
   broadcastConnectionStatus();
@@ -152,6 +157,7 @@ function setupTikTokListeners() {
 
   tiktokLiveConnection.on("connected", () => {
     console.log("🟢 TLC CONNECTED");
+    isTiktokConnecting = false;
     isTiktokConnected = true;
     activeSource = "tlc";
     broadcastConnectionStatus();
@@ -159,6 +165,7 @@ function setupTikTokListeners() {
 
   tiktokLiveConnection.on("disconnected", () => {
     console.log("🔌 TLC DISCONNECTED");
+    isTiktokConnecting = false;
     isTiktokConnected = false;
     broadcastConnectionStatus();
 
@@ -170,6 +177,7 @@ function setupTikTokListeners() {
 
   tiktokLiveConnection.on("streamEnd", () => {
     console.log("🛑 TLC STREAM ENDED");
+    isTiktokConnecting = false;
     isTiktokConnected = false;
     broadcastConnectionStatus();
 
@@ -185,20 +193,39 @@ function setupTikTokListeners() {
 
 async function connectTikTok() {
   if (!TIKTOK_USERNAME) return;
-  disconnectTikTok();
+
+  // Bersihkan koneksi lama tanpa broadcast disconnected prematur
+  clearTimeout(tiktokRetryTimeout);
+  if (tiktokLiveConnection) {
+    tiktokLiveConnection.removeAllListeners();
+    try { tiktokLiveConnection.disconnect(); } catch (e) {}
+    tiktokLiveConnection = null;
+  }
 
   // Putuskan IndoFinity jika aktif
   if (isIndofinityConnected) disconnectIndofinity();
 
-  tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
+  isTiktokConnecting = true;
+  isTiktokConnected = false;
+  activeSource = "tlc";
+  broadcastConnectionStatus();
+
+  tiktokLiveConnection = new TikTokConnector(TIKTOK_USERNAME, {});
   setupTikTokListeners();
   setupTikTokChatHandler();
 
   try {
     const state = await tiktokLiveConnection.connect();
+    isTiktokConnecting = false;
+    isTiktokConnected = true;
     console.log(`✅ Terhubung ke TikTok @${TIKTOK_USERNAME} (Room ${state.roomId})`);
+    broadcastConnectionStatus();
   } catch (err) {
-    console.error("❌ TLC gagal konek, retry 5 detik...");
+    isTiktokConnecting = false;
+    isTiktokConnected = false;
+    activeSource = null;
+    broadcastConnectionStatus();
+    console.error("❌ TLC gagal konek, retry 5 detik...", err.message || err);
     tiktokRetryTimeout = setTimeout(connectTikTok, 5000);
   }
 }
@@ -209,14 +236,15 @@ if (TIKTOK_USERNAME) connectTikTok();
 let INDOFINITY_ADDRESS = null; // e.g. "192.168.1.100:62024"
 let indofinityWs = null;
 let indofinityRetryTimeout = null;
-let isIndofinityConnected = false;
 
 function disconnectIndofinity() {
   clearTimeout(indofinityRetryTimeout);
   if (indofinityWs) {
+    indofinityWs.removeAllListeners();
     try { indofinityWs.close(); } catch (e) {}
     indofinityWs = null;
   }
+  isIndofinityConnecting = false;
   isIndofinityConnected = false;
   if (activeSource === "indofinity") activeSource = null;
   broadcastConnectionStatus();
@@ -225,10 +253,21 @@ function disconnectIndofinity() {
 
 function connectIndofinity() {
   if (!INDOFINITY_ADDRESS) return;
-  disconnectIndofinity();
+
+  clearTimeout(indofinityRetryTimeout);
+  if (indofinityWs) {
+    indofinityWs.removeAllListeners();
+    try { indofinityWs.close(); } catch (e) {}
+    indofinityWs = null;
+  }
 
   // Putuskan TikTok jika aktif
   if (isTiktokConnected) disconnectTikTok();
+
+  isIndofinityConnecting = true;
+  isIndofinityConnected = false;
+  activeSource = "indofinity";
+  broadcastConnectionStatus();
 
   const wsUrl = `ws://${INDOFINITY_ADDRESS}`;
   console.log(`🌐 Menghubungkan ke IndoFinity: ${wsUrl}`);
@@ -236,6 +275,9 @@ function connectIndofinity() {
   try {
     indofinityWs = new WebSocket(wsUrl);
   } catch (err) {
+    isIndofinityConnecting = false;
+    isIndofinityConnected = false;
+    activeSource = null;
     console.error(`❌ IndoFinity URL tidak valid: ${wsUrl}`);
     broadcastConnectionStatus();
     return;
@@ -243,6 +285,7 @@ function connectIndofinity() {
 
   indofinityWs.on("open", () => {
     console.log(`🟢 IndoFinity CONNECTED: ${wsUrl}`);
+    isIndofinityConnecting = false;
     isIndofinityConnected = true;
     activeSource = "indofinity";
     broadcastConnectionStatus();
@@ -259,6 +302,7 @@ function connectIndofinity() {
 
   indofinityWs.on("close", () => {
     console.log("🔌 IndoFinity connection closed");
+    isIndofinityConnecting = false;
     isIndofinityConnected = false;
     broadcastConnectionStatus();
 
@@ -269,7 +313,10 @@ function connectIndofinity() {
   });
 
   indofinityWs.on("error", (err) => {
+    isIndofinityConnecting = false;
+    isIndofinityConnected = false;
     console.error("❌ IndoFinity WS error:", err.message);
+    broadcastConnectionStatus();
   });
 }
 
@@ -284,7 +331,7 @@ function handleIndofinityEvent(message) {
       uniqueId: data.uniqueId || data.userId || "unknown",
       nickname: data.nickname || data.uniqueId || "Penonton",
       comment: data.comment || "",
-      profilePictureUrl: data.profilePictureUrl || null,
+      profilePictureUrl: extractProfilePictureUrl(data),
       followRole: data.followRole || 0,
       isModerator: data.isModerator || false,
     };
@@ -338,8 +385,18 @@ function handleIndofinityEvent(message) {
 
   // --- GIFT EVENT ---
   if (event === "gift") {
-    console.log(`[IF] 🎁 ${data.nickname || data.uniqueId} kirim ${data.giftName || "gift"}`);
-    broadcast("gift", data);
+    const giftDetails = extractGiftDetails(data);
+    console.log(`[IF] 🎁 ${data.nickname || data.uniqueId} kirim ${giftDetails.giftName} (${giftDetails.repeatCount > 1 ? 'x' + giftDetails.repeatCount : ''})`);
+    broadcast("gift", {
+      ...data,
+      nickname: data.nickname || data.uniqueId || "Penonton",
+      giftName: giftDetails.giftName,
+      giftPictureUrl: giftDetails.giftIcon,
+      giftIcon: giftDetails.giftIcon,
+      diamondCount: giftDetails.diamondCount,
+      repeatCount: giftDetails.repeatCount,
+      profilePictureUrl: extractProfilePictureUrl(data)
+    });
   }
 
   // --- DONATION EVENTS (Saweria, Sociabuzz, Trakteer, dll.) ---
@@ -357,6 +414,130 @@ function handleIndofinityEvent(message) {
 }
 
 // --- UTIL ---
+function extractGiftDetails(raw) {
+  if (!raw) return { giftName: "Gift", giftIcon: null, diamondCount: 1, repeatCount: 1 };
+
+  const giftName = raw.giftName || raw.gift?.name || raw.extendedGiftInfo?.name || raw.giftDetails?.giftName || "Gift";
+  const diamondCount = raw.diamondCount || raw.gift?.diamondCount || raw.extendedGiftInfo?.diamond_count || 1;
+  const repeatCount = raw.repeatCount || raw.comboCount || raw.groupCount || 1;
+
+  let giftIcon = null;
+  const giftObj = raw.gift || raw.extendedGiftInfo || raw.giftDetails || {};
+
+  for (const imgField of [giftObj.image, giftObj.icon, giftObj.previewImage, giftObj.giftLabelIcon]) {
+    if (imgField) {
+      if (Array.isArray(imgField.urlList) && imgField.urlList.length > 0) {
+        giftIcon = imgField.urlList.find(x => typeof x === "string" && x.startsWith("http"));
+        if (giftIcon) break;
+      }
+      if (Array.isArray(imgField.url_list) && imgField.url_list.length > 0) {
+        giftIcon = imgField.url_list.find(x => typeof x === "string" && x.startsWith("http"));
+        if (giftIcon) break;
+      }
+      if (typeof imgField.uri === "string" && imgField.uri.startsWith("http")) {
+        giftIcon = imgField.uri;
+        break;
+      }
+    }
+  }
+
+  if (!giftIcon) {
+    if (typeof raw.giftPictureUrl === "string" && raw.giftPictureUrl.startsWith("http")) giftIcon = raw.giftPictureUrl;
+    else if (typeof raw.giftIcon === "string" && raw.giftIcon.startsWith("http")) giftIcon = raw.giftIcon;
+    else if (typeof raw.gift_url === "string" && raw.gift_url.startsWith("http")) giftIcon = raw.gift_url;
+    else if (typeof giftObj.gift_url === "string" && giftObj.gift_url.startsWith("http")) giftIcon = giftObj.gift_url;
+  }
+
+  return { giftName, giftIcon, diamondCount, repeatCount };
+}
+function extractProfilePictureUrl(raw) {
+  if (!raw) return null;
+
+  // 1. Direct string fields
+  if (typeof raw.profilePictureUrl === "string" && raw.profilePictureUrl.startsWith("http")) return raw.profilePictureUrl;
+  if (typeof raw.avatarUrl === "string" && raw.avatarUrl.startsWith("http")) return raw.avatarUrl;
+
+  // 2. User object fields (raw.user / raw.userDetails / raw.sender)
+  const user = raw.user || raw.userDetails || raw.sender || raw;
+
+  if (typeof user.profilePictureUrl === "string" && user.profilePictureUrl.startsWith("http")) return user.profilePictureUrl;
+  if (typeof user.avatarUrl === "string" && user.avatarUrl.startsWith("http")) return user.avatarUrl;
+
+  // 3. Array of URLs (profilePictureUrls / avatarUrls)
+  if (Array.isArray(user.profilePictureUrls) && user.profilePictureUrls.length > 0) {
+    const u = user.profilePictureUrls.find(x => typeof x === "string" && x.startsWith("http"));
+    if (u) return u;
+  }
+
+  // 4. Protobuf ImageModel (avatarThumb / avatarMedium / avatarLarge)
+  for (const imgField of [user.avatarThumb, user.avatarMedium, user.avatarLarge]) {
+    if (imgField) {
+      if (Array.isArray(imgField.urlList) && imgField.urlList.length > 0) {
+        const u = imgField.urlList.find(x => typeof x === "string" && x.startsWith("http"));
+        if (u) return u;
+      }
+      if (typeof imgField.uri === "string" && imgField.uri.startsWith("http")) {
+        return imgField.uri;
+      }
+      if (typeof imgField.openWebUrl === "string" && imgField.openWebUrl.startsWith("http")) {
+        return imgField.openWebUrl;
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractUserRole(raw, hostUsername) {
+  if (!raw) return { role: "NON-FOLLOWER", isHost: false, isMod: false, isFollower: false };
+
+  const user = raw.user || raw.userDetails || raw.sender || {};
+  const userIdentity = raw.userIdentity || user.userIdentity || {};
+  const followInfo = user.followInfo || raw.followInfo || {};
+  const userAttr = user.userAttr || raw.userAttr || {};
+
+  const uniqueId = (raw.uniqueId || user.displayId || user.uniqueId || "").toLowerCase();
+  const targetHost = (hostUsername || "").toLowerCase().replace(/^@/, "");
+
+  const isHost = Boolean(
+    userIdentity.isAnchor ||
+    raw.isAnchor ||
+    user.isAnchor ||
+    (uniqueId && targetHost && uniqueId === targetHost)
+  );
+
+  const isMod = Boolean(
+    isHost ||
+    userIdentity.isModeratorOfAnchor ||
+    raw.isModerator ||
+    user.isModerator ||
+    userAttr.isAdmin ||
+    raw.userRole === 3
+  );
+
+  const followStatusVal = Number(followInfo.followStatus || 0);
+  const followRoleVal = Number(raw.followRole ?? user.followRole ?? 0);
+
+  const isFollower = Boolean(
+    isHost ||
+    isMod ||
+    userIdentity.isFollowerOfAnchor ||
+    userIdentity.isMutualFollowingWithAnchor ||
+    userIdentity.isSubscriberOfAnchor ||
+    followStatusVal >= 1 ||
+    followRoleVal >= 1 ||
+    raw.isFollower ||
+    user.isFollower
+  );
+
+  let role = "NON-FOLLOWER";
+  if (isHost) role = "HOST";
+  else if (isMod) role = "MOD";
+  else if (isFollower) role = "FOLLOWER";
+
+  return { role, isHost, isMod, isFollower };
+}
+
 function canRequest(userId) {
   const now = Date.now();
   const last = userCooldown.get(userId) || 0;
@@ -370,65 +551,89 @@ function canRequest(userId) {
 function setupTikTokChatHandler() {
   if (!tiktokLiveConnection) return;
 
-  tiktokLiveConnection.on("chat", (data) => {
-  const msg = data.comment.trim();
+  tiktokLiveConnection.on("chat", (raw) => {
+    if (!raw) return;
 
-  const isHost = data.uniqueId === TIKTOK_USERNAME;
-  const isMod = data.isModerator;
-  const isFollower = data.followRole >= 1;
+    const userRoleInfo = extractUserRole(raw, TIKTOK_USERNAME);
 
-  let role = "NON-FOLLOWER";
-  if (isHost) role = "HOST";
-  else if (isMod) role = "MOD";
-  else if (isFollower) role = "FOLLOWER";
+    const data = {
+      uniqueId: raw.uniqueId || raw.user?.displayId || raw.user?.uniqueId || "unknown",
+      nickname: raw.nickname || raw.user?.nickname || raw.uniqueId || raw.user?.displayId || "Penonton",
+      comment: (raw.comment || raw.content || "").trim(),
+      profilePictureUrl: extractProfilePictureUrl(raw),
+      followRole: userRoleInfo.isFollower ? 1 : 0,
+      isModerator: userRoleInfo.isMod,
+      isHost: userRoleInfo.isHost,
+      isFollower: userRoleInfo.isFollower
+    };
 
-  console.log(`[${role}] ${data.nickname}: ${msg}`);
+    const msg = data.comment;
+    if (!msg) return; // Abaikan pesan kosong/emote tanpa teks
 
-  // Semua orang bisa chat — tidak ada block total
-  broadcast("chat", { ...data, role });
+    const { role, isHost, isMod, isFollower } = userRoleInfo;
 
-  // --- PLAY COMMAND ---
-  if (msg.toLowerCase().startsWith("!play ")) {
-    // Hanya follower, mod, dan host yang bisa request lagu
-    if (!isHost && !isMod && !isFollower) {
-      console.log(`[BLOCKED REQUEST] ${data.nickname} - bukan follower`);
-      broadcast("request_blocked", {
-        nickname: data.nickname,
-        uniqueId: data.uniqueId,
-        reason: "Hanya follower yang bisa request lagu"
-      });
-      return;
+    console.log(`[${role}] ${data.nickname}: ${msg}`);
+
+    // Semua orang bisa chat — tidak ada block total
+    broadcast("chat", { ...raw, ...data, role });
+
+    // --- PLAY COMMAND ---
+    if (msg.toLowerCase().startsWith("!play ")) {
+      // Hanya follower, mod, dan host yang bisa request lagu
+      if (!isHost && !isMod && !isFollower) {
+        console.log(`[BLOCKED REQUEST] ${data.nickname} - bukan follower`);
+        broadcast("request_blocked", {
+          nickname: data.nickname,
+          uniqueId: data.uniqueId,
+          reason: "Hanya follower yang bisa request lagu"
+        });
+        return;
+      }
+
+      if (!canRequest(data.uniqueId)) {
+        console.log(`[COOLDOWN] ${data.nickname}`);
+        return;
+      }
+
+      if (musicQueue.length >= MAX_QUEUE) {
+        console.log(`[QUEUE FULL]`);
+        return;
+      }
+
+      const query = msg.substring(6).trim();
+      if (query.length > 0) {
+        handlePlayRequest(query, data);
+      }
     }
 
-    if (!canRequest(data.uniqueId)) {
-      console.log(`[COOLDOWN] ${data.nickname}`);
-      return;
+    // --- SKIP COMMAND ---
+    if (msg.toLowerCase() === "!skip") {
+      if (isHost || isMod) {
+        console.log(`[SKIP] oleh ${data.nickname}`);
+        playNext();
+      }
     }
-
-    if (musicQueue.length >= MAX_QUEUE) {
-      console.log(`[QUEUE FULL]`);
-      return;
-    }
-
-    const query = msg.substring(6).trim();
-    if (query.length > 0) {
-      handlePlayRequest(query, data);
-    }
-  }
-
-  // --- SKIP COMMAND ---
-  if (msg.toLowerCase() === "!skip") {
-    if (isHost || isMod) {
-      console.log(`[SKIP] oleh ${data.nickname}`);
-      playNext();
-    }
-  }
-});
+  });
 
   // --- GIFT EVENT ---
-  tiktokLiveConnection.on("gift", (data) => {
-    console.log(`🎁 ${data.nickname} kirim ${data.giftName}`);
-    broadcast("gift", data);
+  tiktokLiveConnection.on("gift", (raw) => {
+    if (!raw) return;
+    const nickname = raw.nickname || raw.user?.nickname || raw.uniqueId || "Penonton";
+    const giftDetails = extractGiftDetails(raw);
+    const profilePictureUrl = extractProfilePictureUrl(raw);
+
+    console.log(`🎁 ${nickname} kirim ${giftDetails.giftName} (${giftDetails.repeatCount > 1 ? 'x' + giftDetails.repeatCount : ''})`);
+
+    broadcast("gift", {
+      ...raw,
+      nickname,
+      giftName: giftDetails.giftName,
+      giftPictureUrl: giftDetails.giftIcon,
+      giftIcon: giftDetails.giftIcon,
+      diamondCount: giftDetails.diamondCount,
+      repeatCount: giftDetails.repeatCount,
+      profilePictureUrl
+    });
   });
 }
 

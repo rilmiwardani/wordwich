@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KAJEPIT</title>
   <meta name="description" content="KAJEPIT - Game tebak kata seru untuk TikTok Live!" />
+  <meta name="referrer" content="no-referrer" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
@@ -735,8 +736,8 @@
   <script>
     // ====== BACKEND CONFIG ======
     // Ganti ke domain backend Render kamu (tanpa trailing slash).
-    const BACKEND_HTTP = window.location.origin;
-    const BACKEND_WS = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host;
+    const BACKEND_HTTP = window.location.origin && window.location.origin !== "null" ? window.location.origin : "http://localhost:3000";
+    const BACKEND_WS = (window.location.protocol === "https:" ? "wss://" : "ws://") + (window.location.host || "localhost:3000");
 
     // FIX #11: XSS sanitization — escape HTML sebelum inject ke DOM
     function escapeHTML(str) {
@@ -850,7 +851,7 @@
 
       if (track.requester) {
         if (track.requester.avatar) {
-          playerReqAvatarContainer.innerHTML = `<img src="${escapeHTML(track.requester.avatar)}" class="w-full h-full object-cover">`;
+          playerReqAvatarContainer.innerHTML = `<img src="${escapeHTML(track.requester.avatar)}" referrerpolicy="no-referrer" class="w-full h-full object-cover">`;
         } else {
           playerReqAvatarContainer.innerHTML = userAvatarSVG;
         }
@@ -1146,7 +1147,7 @@
         lastSecretWordEl.innerText = lastWinnerData.word;
 
         if (lastWinnerData.profilePic) {
-          lastWinnerAvatarContainer.innerHTML = `<img src="${escapeHTML(lastWinnerData.profilePic)}" class="w-full h-full object-cover">`;
+          lastWinnerAvatarContainer.innerHTML = `<img src="${escapeHTML(lastWinnerData.profilePic)}" referrerpolicy="no-referrer" class="w-full h-full object-cover">`;
         } else {
           lastWinnerAvatarContainer.innerHTML = userAvatarSVG;
         }
@@ -1452,52 +1453,79 @@
       const inf = data.indofinity || {};
 
       isTiktokConnected = tlc.connected || false;
+      const isTlcConnecting = tlc.connecting || false;
       connectedUsername = tlc.username || null;
+
       isIndofinityConnected = inf.connected || false;
+      const isIfConnecting = inf.connecting || false;
       connectedAddress = inf.address || null;
 
       const indicator = document.getElementById("ws-status-indicator");
       indicator.classList.remove("text-yellow-400", "text-red-500", "text-stream-green", "text-cyan-400");
 
       // --- TLC UI ---
-      btnConnectTlc.disabled = false;
-      btnConnectTlc.innerText = "Hubungkan TLC";
-      if (isTiktokConnected) {
-        btnDisconnectTlc.classList.remove("hidden");
-        if (connectedUsername) tiktokUsernameInput.value = connectedUsername;
-      } else {
+      if (isTlcConnecting) {
+        btnConnectTlc.disabled = true;
+        btnConnectTlc.innerText = "Menghubungkan...";
         btnDisconnectTlc.classList.add("hidden");
+      } else {
+        btnConnectTlc.disabled = false;
+        btnConnectTlc.innerText = "Hubungkan TLC";
+        if (isTiktokConnected) {
+          btnDisconnectTlc.classList.remove("hidden");
+          if (connectedUsername) tiktokUsernameInput.value = connectedUsername;
+        } else {
+          btnDisconnectTlc.classList.add("hidden");
+        }
       }
 
       // --- IndoFinity UI ---
-      btnConnectIf.disabled = false;
-      btnConnectIf.innerText = "Hubungkan IndoFinity";
-      if (isIndofinityConnected) {
-        btnDisconnectIf.classList.remove("hidden");
-        if (connectedAddress) indofinityAddressInput.value = connectedAddress;
-      } else {
+      if (isIfConnecting) {
+        btnConnectIf.disabled = true;
+        btnConnectIf.innerText = "Menghubungkan...";
         btnDisconnectIf.classList.add("hidden");
+      } else {
+        btnConnectIf.disabled = false;
+        btnConnectIf.innerText = "Hubungkan IndoFinity";
+        if (isIndofinityConnected) {
+          btnDisconnectIf.classList.remove("hidden");
+          if (connectedAddress) indofinityAddressInput.value = connectedAddress;
+        } else {
+          btnDisconnectIf.classList.add("hidden");
+        }
       }
 
       // --- Header subtitle & indicator ---
-      if (activeSource === "tlc" && isTiktokConnected && connectedUsername) {
+      if (isTlcConnecting) {
+        indicator.classList.add("text-yellow-400");
+        subtitleText.innerText = `Menghubungkan ke @${connectedUsername || "..."}...`;
+        subtitleText.classList.remove("text-stream-green/70", "text-gray-400");
+        subtitleText.classList.add("text-yellow-400/80");
+        showConnectStatus(`Sedang menghubungkan ke @${connectedUsername || "TikTok"}...`, "loading");
+      } else if (isIfConnecting) {
+        indicator.classList.add("text-yellow-400");
+        subtitleText.innerText = `Menghubungkan ke IndoFinity...`;
+        subtitleText.classList.remove("text-stream-green/70", "text-gray-400");
+        subtitleText.classList.add("text-yellow-400/80");
+        showConnectStatus(`Sedang menghubungkan ke IndoFinity (${connectedAddress})...`, "loading");
+      } else if (activeSource === "tlc" && isTiktokConnected && connectedUsername) {
         indicator.classList.add("text-stream-green");
         subtitleText.innerText = `TLC: @${connectedUsername}`;
-        subtitleText.classList.remove("text-gray-400");
+        subtitleText.classList.remove("text-gray-400", "text-yellow-400/80");
         subtitleText.classList.add("text-stream-green/70");
         showConnectStatus(`Terhubung ke @${connectedUsername} (TLC)`, "success");
         setTimeout(closeConnectModal, 1500);
       } else if (activeSource === "indofinity" && isIndofinityConnected) {
         indicator.classList.add("text-cyan-400");
         subtitleText.innerText = `IF: ${connectedAddress}`;
-        subtitleText.classList.remove("text-gray-400");
+        subtitleText.classList.remove("text-gray-400", "text-yellow-400/80");
         subtitleText.classList.add("text-stream-green/70");
         showConnectStatus(`Terhubung ke IndoFinity (${connectedAddress})`, "success");
         setTimeout(closeConnectModal, 1500);
       } else {
         indicator.classList.add("text-yellow-400");
         subtitleText.innerText = "Cari kata yang terjepit!";
-        subtitleText.classList.remove("text-stream-green/70");
+        subtitleText.classList.remove("text-stream-green/70", "text-yellow-400/80");
         subtitleText.classList.add("text-gray-400");
         if (!connectedUsername && !connectedAddress) {
           showConnectStatus("Belum terhubung", "error");
@@ -1821,8 +1849,9 @@
         glowClass = "alert-glow-pink";
 
         let imgHtml = "";
-        if (data.giftPictureUrl) {
-          imgHtml = `<img src="${escapeHTML(data.giftPictureUrl)}" class="w-5 h-5 object-contain drop-shadow-[0_0_3px_rgba(236,72,153,0.4)]">`;
+        const giftPic = data.giftPictureUrl || data.giftIcon || null;
+        if (giftPic) {
+          imgHtml = `<img src="${escapeHTML(giftPic)}" referrerpolicy="no-referrer" class="w-5 h-5 object-contain drop-shadow-[0_0_3px_rgba(236,72,153,0.4)]">`;
         } else {
           imgHtml = `<svg class="w-4 h-4 text-pink-400" fill="currentColor" viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1h-4v-2h4zM9 4c.55 0 1 .45 1 1h-4c0-.55.45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>`;
         }
@@ -2174,7 +2203,7 @@
 
       // FIX: Escape semua user-controlled content sebelum inject ke innerHTML
       let avatarHTML = details.profilePic
-        ? `<img src="${escapeHTML(details.profilePic)}" alt="avatar" class="w-8 h-8 rounded-full shrink-0 object-cover border border-gray-600">`
+        ? `<img src="${escapeHTML(details.profilePic)}" alt="avatar" referrerpolicy="no-referrer" class="w-8 h-8 rounded-full shrink-0 object-cover border border-gray-600">`
         : `<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-600">${userAvatarSVG}</div>`;
 
       item.innerHTML = `
@@ -2359,7 +2388,7 @@
       }
 
       let avatarHTML = profilePic
-        ? `<img src="${escapeHTML(profilePic)}" alt="avatar" class="w-12 h-12 rounded-full shrink-0 object-cover border-2 border-gray-600 shadow-sm">`
+        ? `<img src="${escapeHTML(profilePic)}" alt="avatar" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full shrink-0 object-cover border-2 border-gray-600 shadow-sm">`
         : `<div class="w-12 h-12 rounded-full shrink-0 border-2 border-gray-600 flex items-center justify-center bg-[#2563eb] overflow-hidden shadow-sm">${userAvatarSVG}</div>`;
 
       toast.className = `relative overflow-hidden bg-[#0a1118]/90 backdrop-blur-xl border border-gray-700/50 p-4 rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.6)] flex flex-col transform transition-all duration-500 translate-y-8 opacity-0 max-w-[calc(100vw-2rem)] w-80`;
@@ -2412,7 +2441,7 @@
       isGameOver = true;
       renderUI();
 
-      if (details.profilePic) winAvatarContainer.innerHTML = `<img src="${escapeHTML(details.profilePic)}" class="w-full h-full rounded-full object-cover border-[3px] border-[#0a1118]">`;
+      if (details.profilePic) winAvatarContainer.innerHTML = `<img src="${escapeHTML(details.profilePic)}" referrerpolicy="no-referrer" class="w-full h-full rounded-full object-cover border-[3px] border-[#0a1118]">`;
       else winAvatarContainer.innerHTML = `<div class="w-full h-full rounded-full overflow-hidden border-[3px] border-[#0a1118]">${userAvatarSVG}</div>`;
 
       winTitleEl.innerText = `${details.nickname} Menang!`;
