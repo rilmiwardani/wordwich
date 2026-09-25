@@ -231,10 +231,10 @@
   </style>
 </head>
 
-<body class="h-screen w-screen flex items-center justify-center font-sans antialiased">
+<body class="h-screen w-screen flex items-start sm:items-center justify-center font-sans antialiased">
   <!-- Main Game Container (Mobile/Chat format) -->
   <main
-    class="w-full max-w-lg sm:max-w-xl lg:max-w-2xl h-[100dvh] sm:h-[94dvh] lg:h-[92dvh] flex flex-col relative bg-stream-bg sm:border sm:border-gray-800 sm:rounded-2xl overflow-hidden shadow-2xl my-auto">
+    class="w-full max-w-lg sm:max-w-xl lg:max-w-2xl h-[100dvh] sm:h-[94dvh] lg:h-[92dvh] flex flex-col relative bg-stream-bg sm:border sm:border-gray-800 sm:rounded-2xl overflow-hidden shadow-2xl my-0 sm:my-auto">
     <!-- Header -->
     <header class="p-4 border-b border-gray-800 bg-stream-bg z-10 flex justify-between items-center shrink-0">
       <div>
@@ -279,19 +279,18 @@
         <span id="last-winner-name" class="text-white font-bold max-w-[80px] sm:max-w-[120px] truncate">Name</span>
         <!-- Streak Badge (Banner) -->
         <div id="banner-streak-badge"
-          class="hidden items-center gap-1 relative overflow-hidden px-1.5 py-0.5 rounded border streak-badge-shimmer">
-          <svg id="banner-streak-flame" class="w-3 h-3 streak-flame" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C8.5 7 4 9.5 4 14a8 8 0 0016 0c0-4.5-4.5-7-8-12z" fill="url(#bannerFlameGrad)"
-              stroke="none" />
-            <path d="M12 9c-1.5 2.5-3 3.5-3 6a3 3 0 006 0c0-2.5-1.5-3.5-3-6z" fill="#FDE68A" opacity="0.9" />
+          class="hidden items-center gap-1 shrink-0 transition-all duration-300">
+          <svg id="banner-streak-flame" class="w-3.5 h-3.5 streak-flame shrink-0" viewBox="0 0 24 24" fill="none">
             <defs>
-              <linearGradient id="bannerFlameGrad" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FBBF24" />
-                <stop offset="1" stop-color="#EF4444" />
+              <linearGradient id="bannerFlameGrad" x1="0" y1="0" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+                <stop id="bannerFlameStop1" offset="0%" stop-color="#FF9800" />
+                <stop id="bannerFlameStop2" offset="100%" stop-color="#E53935" />
               </linearGradient>
             </defs>
+            <path d="M12 2C9.5 6 5 8.5 5 14C5 18.4 8.1 22 12 22C15.9 22 19 18.4 19 14C19 9.8 16.5 7.5 15 5C14 7 12.8 8.8 11.5 10C11.2 8.5 11.5 5.5 12 2Z" fill="url(#bannerFlameGrad)" stroke="none" />
+            <path id="bannerFlameInner" d="M12 11C10.5 12.8 9.5 14.5 9.5 16.5C9.5 18.4 10.6 20 12 20C13.4 20 14.5 18.4 14.5 16.5C14.5 14.8 13.5 13.2 12 11Z" fill="#FFE082" opacity="0.95" />
           </svg>
-          <span id="banner-streak-count" class="text-[9px] font-black tracking-wide">x2</span>
+          <span id="banner-streak-count" class="text-xs font-black tracking-tight leading-none">2</span>
         </div>
       </div>
       <div class="flex items-center gap-2 bg-black/40 px-2.5 py-1 rounded border border-white/5">
@@ -303,18 +302,16 @@
 
     <!-- Active Category Bar (Below Last Winner Banner & Above Guess List) -->
     <div id="category-bar-container"
-      class="px-4 py-2 bg-[#09131d]/90 border-b border-gray-800/80 flex items-center shrink-0 text-xs z-10">
-      <div class="flex items-center gap-2">
-        <span class="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">KATEGORI:</span>
-        <span id="header-category-badge" class="inline-flex items-center gap-1.5 text-xs font-bold text-white tracking-wide">
-          <i class="fa-solid fa-layer-group text-emerald-400"></i> Semua
-        </span>
+      class="px-4 py-1.5 bg-[#09131d]/90 border-b border-gray-800/80 flex items-center justify-center shrink-0 z-10">
+      <div id="header-category-badge"
+        class="inline-flex items-center justify-center text-[13px] font-bold text-white tracking-wide">
+        <i class="fa-solid fa-layer-group text-emerald-400 mr-1.5"></i> Semua
       </div>
     </div>
 
     <!-- Chat / Guess List -->
     <div id="guess-list"
-      class="flex-1 overflow-y-auto p-3 flex flex-col justify-center gap-[3px] scroll-smooth pb-[30vh] cursor-text relative">
+      class="flex-1 overflow-y-auto p-3 flex flex-col justify-start sm:justify-center gap-[3px] scroll-smooth pb-16 sm:pb-24 cursor-text relative">
       <!-- Permanent Input Box -->
       <form id="secret-divider" class="my-1 w-full shrink-0 relative z-20 hidden" style="order: 2">
         <input type="text" id="dynamic-guess-input" autocomplete="off" inputmode="none"
@@ -633,6 +630,24 @@
         </label>
       </div>
 
+      <!-- Leaderboard Data Management -->
+      <div class="p-3 rounded-2xl bg-[#070e17] border border-[#1e2d40] mb-4 text-left">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex flex-col min-w-0">
+            <span class="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+              <i class="fa-solid fa-trophy text-amber-400"></i> Data Leaderboard
+            </span>
+            <span id="lb-record-count" class="text-[10px] text-gray-500">Total pemain tercatat: 0</span>
+          </div>
+          <button type="button" onclick="resetLeaderboardData()"
+            class="shrink-0 px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 text-[11px] font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            title="Hapus semua data kemenangan dan leaderboard">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+            Reset Leaderboard
+          </button>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div class="flex flex-col gap-2">
         <button onclick="saveAndApplySettings(true)"
@@ -694,21 +709,19 @@
         </div>
 
         <!-- Streak Display (Win Modal) -->
-        <div id="win-streak-container" class="hidden w-full mb-6 streak-pop-in">
-          <div id="win-streak-badge"
-            class="relative overflow-hidden mx-auto w-fit flex items-center gap-2 px-4 py-2 rounded-xl border streak-badge-shimmer">
-            <svg class="w-5 h-5 streak-flame" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C8.5 7 4 9.5 4 14a8 8 0 0016 0c0-4.5-4.5-7-8-12z" fill="url(#modalFlameGrad)" stroke="none" />
-              <path d="M12 9c-1.5 2.5-3 3.5-3 6a3 3 0 006 0c0-2.5-1.5-3.5-3-6z" fill="#FDE68A" opacity="0.9" />
+        <div id="win-streak-container" class="hidden w-full mb-5 streak-pop-in justify-center">
+          <div id="win-streak-badge" class="flex items-center justify-center gap-2 mx-auto">
+            <svg id="modal-streak-flame" class="w-8 h-8 streak-flame shrink-0" viewBox="0 0 24 24" fill="none">
               <defs>
-                <linearGradient id="modalFlameGrad" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#FBBF24" />
-                  <stop offset="1" stop-color="#EF4444" />
+                <linearGradient id="modalFlameGrad" x1="0" y1="0" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+                  <stop id="modalFlameStop1" offset="0%" stop-color="#FF9800" />
+                  <stop id="modalFlameStop2" offset="100%" stop-color="#E53935" />
                 </linearGradient>
               </defs>
+              <path d="M12 2C9.5 6 5 8.5 5 14C5 18.4 8.1 22 12 22C15.9 22 19 18.4 19 14C19 9.8 16.5 7.5 15 5C14 7 12.8 8.8 11.5 10C11.2 8.5 11.5 5.5 12 2Z" fill="url(#modalFlameGrad)" stroke="none" />
+              <path id="modalFlameInner" d="M12 11C10.5 12.8 9.5 14.5 9.5 16.5C9.5 18.4 10.6 20 12 20C13.4 20 14.5 18.4 14.5 16.5C14.5 14.8 13.5 13.2 12 11Z" fill="#FFE082" opacity="0.95" />
             </svg>
-            <span class="text-[10px] font-bold uppercase tracking-[0.15em]" id="win-streak-label">STREAK</span>
-            <span class="text-lg font-black" id="win-streak-number">x2</span>
+            <span class="text-3xl font-black tracking-tight leading-none" id="win-streak-number">2</span>
           </div>
         </div>
       </div>
@@ -717,9 +730,15 @@
       <div id="leaderboard-view" style="display:none;"
         class="w-full flex flex-col items-center opacity-0 transition-all duration-500 scale-95 mb-2">
         
-        <h2 class="font-black uppercase tracking-tight flex items-center justify-center gap-2 drop-shadow-md w-full mb-4" style="font-size: 18px;">
-          <span style="background: linear-gradient(to right, #facc15, #fde68a, #eab308); -webkit-background-clip: text; color: transparent;">TOP 5</span>
-        </h2>
+        <div class="relative w-full flex items-center justify-center mb-4">
+          <h2 class="font-black uppercase tracking-tight flex items-center justify-center gap-2 drop-shadow-md" style="font-size: 18px;">
+            <span style="background: linear-gradient(to right, #facc15, #fde68a, #eab308); -webkit-background-clip: text; color: transparent;">TOP 5</span>
+          </h2>
+          <button type="button" onclick="resetLeaderboardData()" title="Hapus / Reset Leaderboard"
+            class="pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </div>
         
         <div id="leaderboard-list" class="w-full space-y-1.5 mb-4">
           <!-- Leaderboard items will be injected here -->
@@ -1030,6 +1049,13 @@
 
     let userWins = JSON.parse(localStorage.getItem("guessGameWins") || "{}");
     let lastWinnerData = JSON.parse(localStorage.getItem("guessGameLastWinner") || "null");
+    let userBestStreaks = JSON.parse(localStorage.getItem("guessGameBestStreaks") || "{}");
+    if (lastWinnerData && lastWinnerData.nickname && lastWinnerData.streak) {
+      if ((userBestStreaks[lastWinnerData.nickname] || 0) < lastWinnerData.streak) {
+        userBestStreaks[lastWinnerData.nickname] = lastWinnerData.streak;
+        localStorage.setItem("guessGameBestStreaks", JSON.stringify(userBestStreaks));
+      }
+    }
 
     function getTierInfo(wins) {
       for (let i = tierData.length - 1; i >= 0; i--) {
@@ -1095,8 +1121,8 @@
     let giftHintLevel = 0; // setiap gift naik 1 level (prefix match bertambah)
 
     // --- STREAK STATE ---
-    let currentStreak = 0;
-    let streakHolder = null; // nickname pemegang streak
+    let currentStreak = lastWinnerData && lastWinnerData.streak ? lastWinnerData.streak : 0;
+    let streakHolder = lastWinnerData && lastWinnerData.nickname ? lastWinnerData.nickname : null;
 
     // FIX: Binary insertion — O(log n) vs push+sort O(n log n)
     function binaryInsert(arr, value) {
@@ -1133,11 +1159,101 @@
     let dynamicInput;
 
     // --- STREAK VISUAL HELPERS ---
+    // --- STREAK VISUAL HELPERS (TIKTOK FLAME 5 TIERS) ---
     function getStreakStyle(streak) {
-      if (streak >= 8) return { color: 'text-rose-300', bg: 'bg-rose-500/15', border: 'border-rose-500/40', label: 'UNSTOPPABLE' };
-      if (streak >= 5) return { color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/40', label: 'ON FIRE' };
-      if (streak >= 3) return { color: 'text-amber-300', bg: 'bg-amber-500/15', border: 'border-amber-500/40', label: 'HOT' };
-      return { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', label: 'STREAK' };
+      if (streak >= 10) {
+        // Tier 5: Ungu / Magenta TikTok (10+) - Puncak Tertinggi
+        return {
+          tier: 5,
+          label: 'PURPLE STREAK',
+          subtitle: '👑 Api Ungu TikTok',
+          text: '#f43f5e',
+          bg: 'rgba(217, 70, 239, 0.2)',
+          border: 'rgba(244, 63, 94, 0.55)',
+          glow: '0 0 25px rgba(217, 70, 239, 0.65), inset 0 0 12px rgba(244, 63, 94, 0.25)',
+          flameTop: '#ff2d55',
+          flameBottom: '#a855f7',
+          flameInner: '#fce7f3'
+        };
+      }
+      if (streak >= 7) {
+        // Tier 4: Biru Elektrik (7 - 9)
+        return {
+          tier: 4,
+          label: 'BLUE STREAK',
+          subtitle: '💎 Api Biru',
+          text: '#00d2ff',
+          bg: 'rgba(6, 182, 212, 0.18)',
+          border: 'rgba(0, 210, 255, 0.5)',
+          glow: '0 0 20px rgba(6, 182, 212, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.2)',
+          flameTop: '#38bdf8',
+          flameBottom: '#0284c7',
+          flameInner: '#e0f2fe'
+        };
+      }
+      if (streak >= 5) {
+        // Tier 3: Hijau Neon (5 - 6)
+        return {
+          tier: 3,
+          label: 'GREEN STREAK',
+          subtitle: '💚 Api Hijau',
+          text: '#22c55e',
+          bg: 'rgba(34, 197, 94, 0.16)',
+          border: 'rgba(34, 197, 94, 0.5)',
+          glow: '0 0 18px rgba(34, 197, 94, 0.45), inset 0 0 10px rgba(34, 197, 94, 0.2)',
+          flameTop: '#4ade80',
+          flameBottom: '#16a34a',
+          flameInner: '#dcfce7'
+        };
+      }
+      if (streak >= 3) {
+        // Tier 2: Kuning Emas (3 - 4)
+        return {
+          tier: 2,
+          label: 'YELLOW STREAK',
+          subtitle: '⚡ Api Kuning',
+          text: '#facc15',
+          bg: 'rgba(234, 179, 8, 0.16)',
+          border: 'rgba(250, 204, 21, 0.5)',
+          glow: '0 0 16px rgba(234, 179, 8, 0.4), inset 0 0 10px rgba(250, 204, 21, 0.2)',
+          flameTop: '#fde047',
+          flameBottom: '#eab308',
+          flameInner: '#fef9c3'
+        };
+      }
+      // Tier 1: Oranye / Merah (Streak 2)
+      return {
+        tier: 1,
+        label: 'ORANGE STREAK',
+        subtitle: '🔥 Api Oranye',
+        text: '#ff6b00',
+        bg: 'rgba(249, 115, 22, 0.16)',
+        border: 'rgba(255, 107, 0, 0.5)',
+        glow: '0 0 15px rgba(249, 115, 22, 0.4), inset 0 0 8px rgba(249, 115, 22, 0.2)',
+        flameTop: '#fb923c',
+        flameBottom: '#ef4444',
+        flameInner: '#ffedd5'
+      };
+    }
+
+    function getStreakFlameHTML(streak, gradId = 'flameGrad') {
+      if (!streak || streak < 2) return '';
+      const s = getStreakStyle(streak);
+      return `
+        <span class="inline-flex items-center gap-0.5 font-black shrink-0" style="color: ${s.text}; font-size: 10px; line-height: 1;" title="Best Streak: ${streak}">
+          <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="${s.flameTop}" />
+                <stop offset="100%" stop-color="${s.flameBottom}" />
+              </linearGradient>
+            </defs>
+            <path d="M12 2C9.5 6 5 8.5 5 14C5 18.4 8.1 22 12 22C15.9 22 19 18.4 19 14C19 9.8 16.5 7.5 15 5C14 7 12.8 8.8 11.5 10C11.2 8.5 11.5 5.5 12 2Z" fill="url(#${gradId})" stroke="none" />
+            <path d="M12 11C10.5 12.8 9.5 14.5 9.5 16.5C9.5 18.4 10.6 20 12 20C13.4 20 14.5 18.4 14.5 16.5C14.5 14.8 13.5 13.2 12 11Z" fill="${s.flameInner}" opacity="0.95" />
+          </svg>
+          <span>${streak}</span>
+        </span>
+      `;
     }
 
     function updateLastWinnerBanner() {
@@ -1155,13 +1271,25 @@
         // --- Streak Badge di Banner ---
         const bannerBadge = document.getElementById("banner-streak-badge");
         const bannerCount = document.getElementById("banner-streak-count");
+        const bannerFlame = document.getElementById("banner-streak-flame");
         if (currentStreak >= 2) {
           const s = getStreakStyle(currentStreak);
-          bannerBadge.className = `flex items-center gap-1 relative overflow-hidden px-1.5 py-0.5 rounded border streak-badge-shimmer ${s.bg} ${s.border}`;
-          bannerCount.className = `text-[9px] font-black tracking-wide ${s.color}`;
-          bannerCount.innerText = `x${currentStreak}`;
+          bannerBadge.classList.remove("hidden");
+          bannerBadge.classList.add("flex");
+          
+          bannerCount.style.color = s.text;
+          bannerCount.innerText = `${currentStreak}`;
+
+          const stop1 = document.getElementById("bannerFlameStop1");
+          const stop2 = document.getElementById("bannerFlameStop2");
+          const inner = document.getElementById("bannerFlameInner");
+          if (stop1) stop1.setAttribute("stop-color", s.flameTop);
+          if (stop2) stop2.setAttribute("stop-color", s.flameBottom);
+          if (inner) inner.setAttribute("fill", s.flameInner);
+          if (bannerFlame) bannerFlame.style.filter = `drop-shadow(0 0 5px ${s.flameTop})`;
         } else {
-          bannerBadge.className = `hidden items-center gap-1 relative overflow-hidden px-1.5 py-0.5 rounded border streak-badge-shimmer`;
+          bannerBadge.classList.add("hidden");
+          bannerBadge.classList.remove("flex");
         }
       } else {
         lastWinnerBanner.classList.add("hidden");
@@ -1565,6 +1693,7 @@
 
     function openSettingsModal() {
       renderCategoryOptionsUI();
+      updateLeaderboardSettingsUI();
       settingShowClueEl.checked = gameSettings.showCategoryClue !== false;
       settingMultiWordEl.checked = gameSettings.allowMultiWord !== false;
       settingStrictCategoryEl.checked = gameSettings.strictCategory === true;
@@ -1697,6 +1826,119 @@
       } else {
         updateCategoryBadgeUI();
       }
+    }
+
+    function updateLeaderboardSettingsUI() {
+      const lbRecordCountEl = document.getElementById("lb-record-count");
+      if (lbRecordCountEl) {
+        const count = Object.keys(userWins).length;
+        lbRecordCountEl.innerText = `Total pemain tercatat: ${count}`;
+      }
+    }
+
+    function renderLeaderboardList() {
+      const lbList = document.getElementById("leaderboard-list");
+      if (!lbList) return;
+      lbList.innerHTML = "";
+      const top5 = Object.entries(userWins)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      if (top5.length === 0) {
+        lbList.innerHTML = `
+          <div class="py-8 text-center flex flex-col items-center justify-center text-gray-500">
+            <i class="fa-solid fa-trophy text-2xl text-gray-600 mb-2 opacity-40"></i>
+            <span class="text-xs">Belum ada data kemenangan</span>
+          </div>
+        `;
+        return;
+      }
+
+      top5.forEach(([nick, wins], idx) => {
+        const tier = getTierInfo(wins);
+        const bestStreak = userBestStreaks[nick] || 0;
+        const bestStreakHTML = getStreakFlameHTML(bestStreak, `lbFlameGrad_${idx}`);
+        
+        let rankBadge = '';
+        let rowStyle = '';
+        let nameStyle = '';
+        let winStyle = '';
+        let rowBg = '';
+        
+        if (idx === 0) {
+          // 1st Place - Gold
+          rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#451a03] shrink-0 z-10" style="width: 32px; height: 32px; min-width: 32px; background: linear-gradient(to bottom, #fcd34d, #b45309); border: 2px solid #fef08a; font-size: 14px; box-shadow: 0 0 12px rgba(251,191,36,0.6);">1</div>`;
+          rowStyle = `z-10 transform scale-[1.02]`;
+          rowBg = `background: linear-gradient(to right, rgba(180, 83, 9, 0.3), rgba(18, 28, 41, 0.9)); border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 0 20px rgba(251,191,36,0.15);`;
+          nameStyle = `text-yellow-400 font-extrabold text-sm drop-shadow-sm`;
+          winStyle = `text-yellow-400 drop-shadow-sm`;
+        } else if (idx === 1) {
+          // 2nd Place - Silver
+          rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-slate-900 shrink-0" style="width: 28px; height: 28px; min-width: 28px; background: linear-gradient(to bottom, #e2e8f0, #64748b); border: 2px solid #cbd5e1; font-size: 12px; box-shadow: 0 0 8px rgba(148,163,184,0.4);">2</div>`;
+          rowBg = `background: linear-gradient(to right, rgba(100, 116, 139, 0.2), rgba(18, 28, 41, 0.8)); border: 1px solid rgba(148, 163, 184, 0.3);`;
+          nameStyle = `text-slate-200 font-bold text-xs`;
+          winStyle = `text-slate-300 drop-shadow-sm`;
+        } else if (idx === 2) {
+          // 3rd Place - Bronze
+          rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#431407] shrink-0" style="width: 28px; height: 28px; min-width: 28px; background: linear-gradient(to bottom, #fdba74, #9a3412); border: 2px solid #fdba74; font-size: 12px; box-shadow: 0 0 8px rgba(251,146,60,0.4);">3</div>`;
+          rowBg = `background: linear-gradient(to right, rgba(234, 88, 12, 0.2), rgba(18, 28, 41, 0.8)); border: 1px solid rgba(234, 88, 12, 0.3);`;
+          nameStyle = `text-orange-200 font-bold text-xs`;
+          winStyle = `text-orange-300 drop-shadow-sm`;
+        } else {
+          // 4th & 5th Place
+          rankBadge = `<div class="relative flex items-center justify-center rounded-full font-bold text-gray-400 bg-[#1e2d40] shrink-0" style="width: 24px; height: 24px; min-width: 24px; border: 1px solid #374151; font-size: 10px;">${idx + 1}</div>`;
+          rowBg = `background-color: rgba(10, 17, 24, 0.5); border: 1px solid rgba(75, 85, 99, 0.4);`;
+          nameStyle = `text-gray-300 font-semibold text-xs`;
+          winStyle = `text-gray-400`;
+        }
+        
+        lbList.innerHTML += `
+          <div class="flex items-center gap-3 rounded-xl transition-all duration-300 ${rowStyle}" style="padding: 8px 12px; margin-bottom: 6px; ${rowBg}">
+            ${rankBadge}
+            <div class="flex-1 min-w-0 text-left">
+              <div class="${nameStyle} truncate tracking-wide" style="line-height: 1.2;">${escapeHTML(nick)}</div>
+              <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                  <span class="inline-flex items-center font-bold uppercase rounded shadow-sm ${tier.color}" style="font-size: 8px; padding: 2px 6px; letter-spacing: 0.05em;">${tier.name}</span>
+                  ${bestStreakHTML}
+              </div>
+            </div>
+            <div class="text-right shrink-0 flex flex-col justify-center items-end pl-2">
+              <div class="font-black leading-none ${winStyle}" style="font-size: 16px;">${wins}</div>
+              <div class="text-gray-500 font-bold uppercase mt-1" style="font-size: 8px; letter-spacing: 0.1em;">WINS</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function resetLeaderboardData() {
+      const totalPlayers = Object.keys(userWins).length;
+      if (totalPlayers === 0 && !lastWinnerData) {
+        alert("Data leaderboard sudah kosong.");
+        return;
+      }
+
+      const confirmed = confirm(
+        `Apakah Anda yakin ingin menghapus data leaderboard (${totalPlayers} pemain)?\n\nSemua riwayat kemenangan dan streak pemenang sebelumnya akan di-reset.`
+      );
+      if (!confirmed) return;
+
+      userWins = {};
+      localStorage.removeItem("guessGameWins");
+
+      userBestStreaks = {};
+      localStorage.removeItem("guessGameBestStreaks");
+
+      lastWinnerData = null;
+      localStorage.removeItem("guessGameLastWinner");
+      currentStreak = 0;
+      streakHolder = null;
+
+      updateLastWinnerBanner();
+      updateLeaderboardSettingsUI();
+      renderLeaderboardList();
+
+      alert("Data leaderboard dan riwayat pemenang berhasil dihapus.");
     }
 
     function _pickRandomCategory() {
@@ -2173,7 +2415,7 @@
                     <div class="flex flex-col min-w-0 justify-center">
                         <span class="font-bold text-[13px] leading-tight mb-0.5 text-transparent">Placeholder</span>
                         <div class="flex items-center">
-                            <span class="text-[8px] px-1.5 py-0.5 rounded border border-transparent text-transparent leading-none">Placeholder</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded border border-transparent text-transparent leading-none">Placeholder</span>
                         </div>
                     </div>
                 </div>
@@ -2397,7 +2639,10 @@
                     ${avatarHTML}
                     <div class="flex-1 min-w-0 flex flex-col justify-center">
                         <div class="font-bold text-[14px] text-white truncate leading-tight mb-1.5 shadow-sm" title="${escapeHTML(nickname)}">${escapeHTML(nickname)}</div>
-                        <div class="inline-flex w-fit items-center text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border shadow-sm ${currentTier.color}">${escapeHTML(currentTier.name)}</div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="inline-flex w-fit items-center text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border shadow-sm ${currentTier.color}">${escapeHTML(currentTier.name)}</span>
+                            ${getStreakFlameHTML(userBestStreaks[nickname] || 0, 'toastRankFlameGrad')}
+                        </div>
                     </div>
                 </div>
                 <div class="${nextTier ? nextTier.color.split(" ")[0] : "text-cyan-300"} w-full">${progressHTML}</div>
@@ -2435,7 +2680,14 @@
         currentStreak = 1;
       }
 
-      lastWinnerData = { nickname: details.nickname, profilePic: details.profilePic, word: secretWord };
+      // Record Best Streak for User
+      const prevBest = userBestStreaks[details.nickname] || 0;
+      if (currentStreak > prevBest) {
+        userBestStreaks[details.nickname] = currentStreak;
+        localStorage.setItem("guessGameBestStreaks", JSON.stringify(userBestStreaks));
+      }
+
+      lastWinnerData = { nickname: details.nickname, profilePic: details.profilePic, word: secretWord, streak: currentStreak };
       localStorage.setItem("guessGameLastWinner", JSON.stringify(lastWinnerData));
 
       isGameOver = true;
@@ -2448,19 +2700,27 @@
 
       // --- STREAK UI di Win Modal ---
       const streakContainer = document.getElementById("win-streak-container");
-      const streakBadge = document.getElementById("win-streak-badge");
-      const streakLabel = document.getElementById("win-streak-label");
       const streakNumber = document.getElementById("win-streak-number");
+      const modalFlame = document.getElementById("modal-streak-flame");
 
       if (currentStreak >= 2) {
         const s = getStreakStyle(currentStreak);
         streakContainer.classList.remove("hidden");
         streakContainer.classList.add("flex", "justify-center");
-        streakBadge.className = `relative overflow-hidden mx-auto w-fit flex items-center gap-2 px-4 py-2 rounded-xl border streak-badge-shimmer ${s.bg} ${s.border}`;
-        streakLabel.className = `text-[10px] font-bold uppercase tracking-[0.15em] ${s.color}`;
-        streakLabel.innerText = s.label;
-        streakNumber.className = `text-lg font-black ${s.color} streak-glow`;
-        streakNumber.innerText = `x${currentStreak}`;
+
+        if (streakNumber) {
+          streakNumber.style.color = s.text;
+          streakNumber.style.textShadow = `0 0 12px ${s.text}`;
+          streakNumber.innerText = `${currentStreak}`;
+        }
+
+        const stop1 = document.getElementById("modalFlameStop1");
+        const stop2 = document.getElementById("modalFlameStop2");
+        const inner = document.getElementById("modalFlameInner");
+        if (stop1) stop1.setAttribute("stop-color", s.flameTop);
+        if (stop2) stop2.setAttribute("stop-color", s.flameBottom);
+        if (inner) inner.setAttribute("fill", s.flameInner);
+        if (modalFlame) modalFlame.style.filter = `drop-shadow(0 0 8px ${s.flameTop})`;
       } else {
         streakContainer.classList.add("hidden");
         streakContainer.classList.remove("flex", "justify-center");
@@ -2496,64 +2756,7 @@
         btnRestart.innerText = `Main Lagi (${countdown}s)`;
 
         // Update Leaderboard List
-        const lbList = document.getElementById("leaderboard-list");
-        lbList.innerHTML = "";
-        const top5 = Object.entries(userWins)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5);
-
-        top5.forEach(([nick, wins], idx) => {
-          const tier = getTierInfo(wins);
-          
-          let rankBadge = '';
-          let rowStyle = '';
-          let nameStyle = '';
-          let winStyle = '';
-          let rowBg = '';
-          
-          if (idx === 0) {
-            // 1st Place - Gold
-            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#451a03] shrink-0 z-10" style="width: 32px; height: 32px; min-width: 32px; background: linear-gradient(to bottom, #fcd34d, #b45309); border: 2px solid #fef08a; font-size: 14px; box-shadow: 0 0 12px rgba(251,191,36,0.6);">1</div>`;
-            rowStyle = `z-10 transform scale-[1.02]`;
-            rowBg = `background: linear-gradient(to right, rgba(180, 83, 9, 0.3), rgba(18, 28, 41, 0.9)); border: 1px solid rgba(234, 179, 8, 0.4); box-shadow: 0 0 20px rgba(251,191,36,0.15);`;
-            nameStyle = `text-yellow-400 font-extrabold text-sm drop-shadow-sm`;
-            winStyle = `text-yellow-400 drop-shadow-sm`;
-          } else if (idx === 1) {
-            // 2nd Place - Silver
-            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-slate-900 shrink-0" style="width: 28px; height: 28px; min-width: 28px; background: linear-gradient(to bottom, #e2e8f0, #64748b); border: 2px solid #cbd5e1; font-size: 12px; box-shadow: 0 0 8px rgba(148,163,184,0.4);">2</div>`;
-            rowBg = `background: linear-gradient(to right, rgba(100, 116, 139, 0.2), rgba(18, 28, 41, 0.8)); border: 1px solid rgba(148, 163, 184, 0.3);`;
-            nameStyle = `text-slate-200 font-bold text-xs`;
-            winStyle = `text-slate-300 drop-shadow-sm`;
-          } else if (idx === 2) {
-            // 3rd Place - Bronze
-            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-black text-[#431407] shrink-0" style="width: 28px; height: 28px; min-width: 28px; background: linear-gradient(to bottom, #fdba74, #9a3412); border: 2px solid #fdba74; font-size: 12px; box-shadow: 0 0 8px rgba(251,146,60,0.4);">3</div>`;
-            rowBg = `background: linear-gradient(to right, rgba(234, 88, 12, 0.2), rgba(18, 28, 41, 0.8)); border: 1px solid rgba(234, 88, 12, 0.3);`;
-            nameStyle = `text-orange-200 font-bold text-xs`;
-            winStyle = `text-orange-300 drop-shadow-sm`;
-          } else {
-            // 4th & 5th Place
-            rankBadge = `<div class="relative flex items-center justify-center rounded-full font-bold text-gray-400 bg-[#1e2d40] shrink-0" style="width: 24px; height: 24px; min-width: 24px; border: 1px solid #374151; font-size: 10px;">${idx + 1}</div>`;
-            rowBg = `background-color: rgba(10, 17, 24, 0.5); border: 1px solid rgba(75, 85, 99, 0.4);`;
-            nameStyle = `text-gray-300 font-semibold text-xs`;
-            winStyle = `text-gray-400`;
-          }
-          
-          lbList.innerHTML += `
-            <div class="flex items-center gap-3 rounded-xl transition-all duration-300 ${rowStyle}" style="padding: 8px 12px; margin-bottom: 6px; ${rowBg}">
-              ${rankBadge}
-              <div class="flex-1 min-w-0 text-left">
-                <div class="${nameStyle} truncate tracking-wide" style="line-height: 1.2;">${escapeHTML(nick)}</div>
-                <div class="mt-1">
-                    <span class="inline-flex items-center font-bold uppercase rounded shadow-sm ${tier.color}" style="font-size: 8px; padding: 2px 6px; letter-spacing: 0.05em;">${tier.name}</span>
-                </div>
-              </div>
-              <div class="text-right shrink-0 flex flex-col justify-center items-end pl-2">
-                <div class="font-black leading-none ${winStyle}" style="font-size: 16px;">${wins}</div>
-                <div class="text-gray-500 font-bold uppercase mt-1" style="font-size: 8px; letter-spacing: 0.1em;">WINS</div>
-              </div>
-            </div>
-          `;
-        });
+        renderLeaderboardList();
 
         // Toggle logic: Win View for 5s, Leaderboard for 5s
         const winView = document.getElementById("win-info-view");
